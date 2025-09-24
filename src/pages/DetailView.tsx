@@ -68,7 +68,10 @@ export const DetailView: React.FC<DetailViewProps> = ({
       <main className="flex-1 p-6 pb-24 overflow-y-auto">
         {/* Audio Player */}
         <div className="mb-8">
-          <AudioPlayer duration={vilm.duration} />
+          <AudioPlayer 
+            audioFilename={vilm.audioFilename}
+            duration={vilm.duration} 
+          />
         </div>
 
         {/* Transcript Section */}

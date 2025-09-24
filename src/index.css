@@ -115,12 +115,32 @@
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
+/* Safe area utilities for mobile devices */
+@layer utilities {
+  .min-h-screen-safe {
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    min-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   }
-
-  body {
-    @apply bg-background text-foreground;
+  
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top, 16px);
+  }
+  
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  
+  .mb-safe-bottom {
+    margin-bottom: env(safe-area-inset-bottom, 16px);
+  }
+  
+  .mr-safe-right {
+    margin-right: env(safe-area-inset-right, 16px);
+  }
+  
+  /* Haptic feedback optimization */
+  .touch-manipulation {
+    touch-action: manipulation;
   }
 }

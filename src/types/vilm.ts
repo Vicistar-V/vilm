@@ -5,6 +5,8 @@ export interface Vilm {
   duration: number; // in seconds
   createdAt: Date;
   updatedAt: Date;
+  audioFilename?: string; // filename of the audio file
+  audioPath?: string; // full path to the audio file
 }
 
 export interface RecordingState {

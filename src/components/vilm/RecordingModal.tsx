@@ -3,17 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Square, Save, X } from 'lucide-react';
-import { RecordingState } from '@/types/vilm';
+import { X, Square, Save, Trash2 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useAudioRecording } from '@/hooks/useAudioRecording';
 
 interface RecordingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (title: string) => void;
-  recordingState: RecordingState;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
+  onSave: (title: string, audioBlob: Blob, duration: number) => Promise<void>;
 }
 
 const formatTime = (seconds: number): string => {
@@ -46,40 +43,121 @@ const WaveformVisualizer: React.FC<{ isRecording: boolean }> = ({ isRecording })
 export const RecordingModal: React.FC<RecordingModalProps> = ({
   isOpen,
   onClose,
-  onSave,
-  recordingState,
-  onStartRecording,
-  onStopRecording
+  onSave
 }) => {
-  const [title, setTitle] = useState('');
+  const [noteTitle, setNoteTitle] = useState('');
   const [stage, setStage] = useState<'recording' | 'finalize'>('recording');
-  const { impact, notification } = useHaptics();
-
+  const [isSaving, setIsSaving] = useState(false);
+  const { impact } = useHaptics();
+  const { 
+    recordingState, 
+    currentRecording, 
+    startRecording, 
+    stopRecording, 
+    cancelRecording,
+    hasPermission 
+  } = useAudioRecording();
+  
   useEffect(() => {
-    if (isOpen) {
-      setStage('recording');
-      setTitle('');
-      onStartRecording();
+    if (isOpen && stage === 'recording' && !recordingState.isRecording && !recordingState.isProcessing) {
+      startRecording().catch((error) => {
+        console.error('Failed to start recording:', error);
+        onClose();
+      });
     }
-  }, [isOpen, onStartRecording]);
+  }, [isOpen, stage, recordingState.isRecording, recordingState.isProcessing, startRecording, onClose]);
 
   const handleStopRecording = async () => {
     await impact();
-    onStopRecording();
-    setStage('finalize');
-    // Auto-focus will be handled by the Input component
+    const audioBlob = await stopRecording();
+    if (audioBlob) {
+      setStage('finalize');
+    } else {
+      onClose();
+    }
   };
 
   const handleSave = async () => {
-    await notification('success');
-    onSave(title);
+    if (!currentRecording) return;
+    
+    try {
+      setIsSaving(true);
+      await impact();
+      await onSave(noteTitle, currentRecording, recordingState.duration);
+      setNoteTitle('');
+      setStage('recording');
+      onClose();
+    } catch (error) {
+      console.error('Failed to save recording:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    cancelRecording();
+    setNoteTitle('');
+    setStage('recording');
     onClose();
   };
 
-  const handleDiscard = async () => {
-    await impact();
+  const handleClose = () => {
+    cancelRecording();
+    setNoteTitle('');
+    setStage('recording');
     onClose();
   };
+
+  if (!hasPermission) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              onClick={onClose}
+            />
+
+            {/* Permission Modal */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{
+                type: 'spring',
+                damping: 30,
+                stiffness: 300,
+              }}
+              className={cn(
+                "fixed bottom-0 left-0 right-0 z-50",
+                "bg-card border-t border-vilm-border",
+                "rounded-t-3xl shadow-2xl",
+                "pb-safe-bottom p-6 pt-8 text-center"
+              )}
+            >
+              <div className="w-12 h-1 bg-vilm-border rounded-full mx-auto mb-8" />
+              
+              <h2 className="text-xl font-semibold text-vilm-text-primary mb-4">
+                Microphone Permission Required
+              </h2>
+              
+              <p className="text-vilm-text-secondary mb-8">
+                Please allow microphone access to record audio notes.
+              </p>
+              
+              <Button onClick={onClose} className="w-full">
+                Close
+              </Button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
 
   return (
     <AnimatePresence>
@@ -91,7 +169,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-            onClick={stage === 'finalize' ? onClose : undefined}
+            onClick={stage === 'finalize' ? handleClose : undefined}
           />
 
           {/* Modal */}
@@ -151,13 +229,13 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                     "bg-vilm-recording hover:bg-vilm-recording/90",
                     "text-white shadow-lg"
                   )}
-                  disabled={recordingState.isProcessing}
+                  disabled={recordingState.isProcessing || !recordingState.isRecording}
                 >
                   <Square size={24} fill="currentColor" />
                 </Button>
 
                 <p className="text-vilm-text-secondary mt-4 text-sm">
-                  Tap to stop recording
+                  {recordingState.isProcessing ? 'Processing...' : 'Tap to stop recording'}
                 </p>
               </div>
             ) : (
@@ -166,6 +244,13 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 {/* Pull indicator */}
                 <div className="w-12 h-1 bg-vilm-border rounded-full mx-auto mb-8" />
 
+                {/* Recording Summary */}
+                <div className="text-center mb-6">
+                  <p className="text-vilm-text-secondary text-sm">
+                    Recording completed • {formatTime(recordingState.duration)}
+                  </p>
+                </div>
+
                 {/* Title Input */}
                 <div className="mb-8">
                   <label className="block text-vilm-text-primary font-medium mb-3">
@@ -173,8 +258,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                   </label>
                   <Input
                     autoFocus
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
                     placeholder={`Note from ${new Date().toLocaleDateString()}`}
                     className={cn(
                       "text-base h-12",
@@ -182,7 +267,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                       "rounded-xl"
                     )}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Enter' && !isSaving) {
                         handleSave();
                       }
                     }}
@@ -194,26 +279,28 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                   <Button
                     variant="outline"
                     onClick={handleDiscard}
+                    disabled={isSaving}
                     className={cn(
                       "flex-1 h-12 rounded-xl",
                       "border-vilm-border text-vilm-text-secondary",
                       "hover:bg-vilm-hover"
                     )}
                   >
-                    <X size={18} className="mr-2" />
+                    <Trash2 size={18} className="mr-2" />
                     Discard
                   </Button>
                   
                   <Button
                     onClick={handleSave}
+                    disabled={isSaving || !currentRecording}
                     className={cn(
                       "flex-1 h-12 rounded-xl",
                       "bg-vilm-primary hover:bg-vilm-primary/90",
-                      "text-white font-medium"
+                      "text-white font-medium disabled:opacity-50"
                     )}
                   >
                     <Save size={18} className="mr-2" />
-                    Save Note
+                    {isSaving ? 'Saving...' : 'Save Note'}
                   </Button>
                 </div>
               </div>
