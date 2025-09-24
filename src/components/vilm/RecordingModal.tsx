@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { X, Square, Save, Trash2 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
 import { AudioRecording } from '@/services/nativeAudioService';
+import { App } from '@capacitor/app';
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -18,6 +19,20 @@ const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+const generateDefaultTitle = (): string => {
+  const now = new Date();
+  const date = now.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric' 
+  });
+  const time = now.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+  return `Note from ${date} at ${time}`;
 };
 
 const WaveformVisualizer: React.FC<{ isRecording: boolean }> = ({ isRecording }) => {
@@ -49,6 +64,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   const [noteTitle, setNoteTitle] = useState('');
   const [stage, setStage] = useState<'recording' | 'finalize'>('recording');
   const [isSaving, setIsSaving] = useState(false);
+  const autoSaveTriggered = useRef(false);
   const { impact } = useHaptics();
   const { 
     recordingState, 
@@ -58,6 +74,50 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     cancelRecording,
     hasPermission 
   } = useAudioRecording();
+
+  // Auto-save grace rule: save recording if app goes to background during finalize stage
+  useEffect(() => {
+    let appStateListener: any;
+
+    const setupAppStateListener = async () => {
+      appStateListener = await App.addListener('appStateChange', (state) => {
+        // If app goes to background while in finalize stage and hasn't been auto-saved yet
+        if (!state.isActive && stage === 'finalize' && currentRecording && !autoSaveTriggered.current) {
+          autoSaveTriggered.current = true;
+          handleAutoSave();
+        }
+      });
+    };
+
+    if (isOpen && stage === 'finalize') {
+      setupAppStateListener();
+    }
+
+    return () => {
+      if (appStateListener) {
+        appStateListener.remove();
+      }
+    };
+  }, [isOpen, stage, currentRecording]);
+
+  const handleAutoSave = async () => {
+    if (!currentRecording) return;
+    
+    try {
+      const defaultTitle = generateDefaultTitle();
+      // Pass the recording object (temporary file info) to be saved permanently
+      await onSave(defaultTitle, '', currentRecording.duration, currentRecording);
+    } catch (error) {
+      console.error('Failed to auto-save recording:', error);
+    }
+  };
+
+  // Reset auto-save flag when modal opens/closes or stage changes
+  useEffect(() => {
+    if (!isOpen || stage === 'recording') {
+      autoSaveTriggered.current = false;
+    }
+  }, [isOpen, stage]);
   
   useEffect(() => {
     if (isOpen && stage === 'recording' && !recordingState.isRecording && !recordingState.isProcessing) {
@@ -111,8 +171,19 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   };
 
   const handleClose = () => {
+    // If in finalize stage and hasn't been auto-saved, trigger auto-save
+    if (stage === 'finalize' && currentRecording && !autoSaveTriggered.current) {
+      autoSaveTriggered.current = true;
+      handleAutoSave().then(() => {
+        setNoteTitle('');
+        setStage('recording');
+        onClose();
+      });
+      return;
+    }
+    
+    // Otherwise, clean up temporary file if it exists
     if (currentRecording?.isTemporary) {
-      // Clean up temporary file
       cancelRecording().catch(console.error);
     }
     setNoteTitle('');
@@ -271,7 +342,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                     autoFocus
                     value={noteTitle}
                     onChange={(e) => setNoteTitle(e.target.value)}
-                    placeholder={`Note from ${new Date().toLocaleDateString()}`}
+                    placeholder={generateDefaultTitle()}
                     className={cn(
                       "text-base h-12",
                       "border-vilm-border focus:border-vilm-primary",
