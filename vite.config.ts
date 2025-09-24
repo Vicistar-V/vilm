@@ -15,4 +15,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: ['realm']
+  },
+  define: {
+    global: 'globalThis',
+  },
 }));

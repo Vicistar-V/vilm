@@ -130,11 +130,17 @@ class NativeAudioService {
       // Ensure permanent directory exists
       await this.ensureAudioDirectory();
       
-      // Read temporary file
+      // Get the actual temp filename (find by pattern)
+      const tempFilename = await this.findTempFile(tempRecording.id);
+      if (!tempFilename) {
+        throw new Error(`Temporary file not found for recording ${tempRecording.id}`);
+      }
+
+      // Read temporary file as base64 for binary audio data
       const tempFileResult = await Filesystem.readFile({
-        path: `${this.tempAudioDirectory}/${this.getTempFilename(tempRecording.id)}`,
+        path: `${this.tempAudioDirectory}/${tempFilename}`,
         directory: Directory.Data,
-        encoding: Encoding.UTF8
+        encoding: Encoding.UTF8 // This reads as base64 for binary files
       });
 
       // Write to permanent location
@@ -157,11 +163,13 @@ class NativeAudioService {
 
   async deleteTemporaryRecording(recordingId: string): Promise<void> {
     try {
-      const tempFilename = this.getTempFilename(recordingId);
-      await Filesystem.deleteFile({
-        path: `${this.tempAudioDirectory}/${tempFilename}`,
-        directory: Directory.Data
-      });
+      const tempFilename = await this.findTempFile(recordingId);
+      if (tempFilename) {
+        await Filesystem.deleteFile({
+          path: `${this.tempAudioDirectory}/${tempFilename}`,
+          directory: Directory.Data
+        });
+      }
     } catch (error) {
       console.error('Failed to delete temporary recording:', error);
       // Don't throw - cleanup failures shouldn't break the app
@@ -309,8 +317,26 @@ class NativeAudioService {
   }
 
   private getTempFilename(recordingId: string): string {
-    // For cleanup, we need to find temp files by recordingId
-    return `temp_${recordingId}_${Date.now()}.webm`;
+    // Use consistent filename pattern for cleanup - find files starting with this pattern
+    return `temp_${recordingId}`;
+  }
+
+  private async findTempFile(recordingId: string): Promise<string | null> {
+    try {
+      // List all files in temp directory
+      const result = await Filesystem.readdir({
+        path: this.tempAudioDirectory,
+        directory: Directory.Data
+      });
+      
+      // Find file that starts with temp_{recordingId}_
+      const prefix = `temp_${recordingId}_`;
+      const matchingFile = result.files.find(file => file.name.startsWith(prefix));
+      return matchingFile?.name || null;
+    } catch (error) {
+      console.error('Failed to find temp file:', error);
+      return null;
+    }
   }
 
   generateAudioId(): string {

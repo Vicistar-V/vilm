@@ -99,6 +99,8 @@ export const useVilmStorage = () => {
     const initialize = async () => {
       try {
         await realmVilmStorage.init();
+        // Clean up any abandoned temporary audio files on startup
+        await nativeAudioService.cleanupAbandonedTempFiles();
         await loadVilms();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to initialize storage');
