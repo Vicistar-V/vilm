@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { VilmCard } from '@/components/vilm/VilmCard';
 import { EmptyState } from '@/components/vilm/EmptyState';
 import { RecordingModal } from '@/components/vilm/RecordingModal';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Vilm, RecordingState } from '@/types/vilm';
 import { useHaptics } from '@/hooks/useHaptics';
 
@@ -109,13 +109,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           Vilm
         </h1>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          className="p-2 hover:bg-vilm-hover rounded-full"
-        >
-          <Settings size={20} className="text-vilm-text-secondary" />
-        </Button>
+        <ThemeToggle />
       </header>
 
       {/* Content */}

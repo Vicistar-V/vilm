@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { MainFeed } from './pages/MainFeed';
 import { DetailView } from './pages/DetailView';
 import { Vilm, AppView } from './types/vilm';
@@ -97,8 +98,9 @@ const App = () => {
   };
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
         <div className="min-h-screen-safe bg-background">
           {currentView === 'feed' && (
             <MainFeed
@@ -118,10 +120,11 @@ const App = () => {
           )}
         </div>
         
-        <Toaster />
-        <Sonner />
-      </TooltipProvider>
-    </QueryClientProvider>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 };
 
