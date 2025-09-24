@@ -2,95 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Vilm Design System - Mobile Native Experience */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Vilm Core Colors */
+    --vilm-background: 0 0% 97.3%; /* #F8F8F8 */
+    --vilm-surface: 0 0% 100%; /* Pure white for cards */
+    --vilm-primary: 213 100% 50%; /* #007AFF Digital Blue */
+    --vilm-primary-foreground: 0 0% 100%;
+    --vilm-recording: 0 83% 59%; /* #FF3B30 System Red */
+    --vilm-recording-foreground: 0 0% 100%;
+    
+    /* Text Colors */
+    --vilm-text-primary: 0 0% 7%; /* Near black */
+    --vilm-text-secondary: 0 0% 45%; /* Medium gray for metadata */
+    --vilm-text-tertiary: 0 0% 65%; /* Light gray for hints */
+    
+    /* Interactive Elements */
+    --vilm-border: 0 0% 90%; /* Subtle borders */
+    --vilm-border-focus: 213 100% 50%; /* Primary blue for focus */
+    --vilm-shadow: 0 0% 0%; /* For card shadows */
+    
+    /* States */
+    --vilm-hover: 213 100% 97%; /* Very light blue hover */
+    --vilm-pressed: 213 100% 94%; /* Slightly darker pressed state */
+    
+    /* Semantic tokens mapped to Vilm system */
+    --background: var(--vilm-background);
+    --foreground: var(--vilm-text-primary);
+    --card: var(--vilm-surface);
+    --card-foreground: var(--vilm-text-primary);
+    --popover: var(--vilm-surface);
+    --popover-foreground: var(--vilm-text-primary);
+    --primary: var(--vilm-primary);
+    --primary-foreground: var(--vilm-primary-foreground);
+    --secondary: 0 0% 94%; /* Light gray */
+    --secondary-foreground: var(--vilm-text-primary);
+    --muted: 0 0% 94%;
+    --muted-foreground: var(--vilm-text-secondary);
+    --accent: var(--vilm-hover);
+    --accent-foreground: var(--vilm-primary);
+    --destructive: var(--vilm-recording);
+    --destructive-foreground: var(--vilm-recording-foreground);
+    --border: var(--vilm-border);
+    --input: var(--vilm-surface);
+    --ring: var(--vilm-border-focus);
+    --radius: 0.75rem; /* 12px - More rounded for mobile */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark Mode Vilm Colors */
+    --vilm-background: 0 0% 11%; /* #1C1C1E Dark Charcoal */
+    --vilm-surface: 0 0% 14%; /* Slightly lighter for cards */
+    --vilm-primary: 213 100% 50%; /* Same #007AFF */
+    --vilm-recording: 0 83% 59%; /* Same #FF3B30 */
+    
+    /* Dark Mode Text */
+    --vilm-text-primary: 0 0% 93%; /* Near white */
+    --vilm-text-secondary: 0 0% 55%; /* Medium gray */
+    --vilm-text-tertiary: 0 0% 35%; /* Darker gray */
+    
+    /* Dark Mode Interactive */
+    --vilm-border: 0 0% 20%; /* Subtle dark borders */
+    --vilm-hover: 213 100% 15%; /* Dark blue hover */
+    --vilm-pressed: 213 100% 12%; /* Darker pressed state */
+    
+    /* Update semantic tokens for dark mode */
+    --background: var(--vilm-background);
+    --foreground: var(--vilm-text-primary);
+    --card: var(--vilm-surface);
+    --card-foreground: var(--vilm-text-primary);
+    --secondary: 0 0% 20%;
+    --secondary-foreground: var(--vilm-text-primary);
+    --muted: 0 0% 20%;
+    --muted-foreground: var(--vilm-text-secondary);
+    --accent: var(--vilm-hover);
+    --border: var(--vilm-border);
+    --input: var(--vilm-surface);
+  }
+  
+  /* Mobile-optimized base styles */
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    @apply font-inter;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  body {
+    @apply bg-background text-foreground;
+    @apply overflow-x-hidden;
+    /* Ensure full viewport coverage on mobile */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Mobile input optimizations */
+  input, textarea {
+    @apply text-base; /* Prevent zoom on iOS */
+    border-radius: var(--radius);
+  }
+  
+  /* Touch-friendly focus states */
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
   }
 }
 
