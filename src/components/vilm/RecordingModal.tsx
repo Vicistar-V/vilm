@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { X, Square, Save, Trash2 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
+import { AudioRecording } from '@/services/nativeAudioService';
 
 interface RecordingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (title: string, audioBlob: Blob, duration: number) => Promise<void>;
+  onSave: (title: string, transcript: string, duration: number, recording: AudioRecording) => Promise<void>;
 }
 
 const formatTime = (seconds: number): string => {
@@ -69,8 +70,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
 
   const handleStopRecording = async () => {
     await impact();
-    const audioBlob = await stopRecording();
-    if (audioBlob) {
+    const recording = await stopRecording();
+    if (recording) {
       setStage('finalize');
     } else {
       onClose();
@@ -83,7 +84,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     try {
       setIsSaving(true);
       await impact();
-      await onSave(noteTitle, currentRecording, recordingState.duration);
+      // Pass the recording object (temporary file info) to be saved permanently
+      await onSave(noteTitle, '', currentRecording.duration, currentRecording);
       setNoteTitle('');
       setStage('recording');
       onClose();
@@ -94,15 +96,25 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     }
   };
 
-  const handleDiscard = () => {
-    cancelRecording();
+  const handleDiscard = async () => {
+    if (currentRecording?.isTemporary) {
+      // Clean up temporary file
+      try {
+        await cancelRecording();
+      } catch (error) {
+        console.error('Failed to cleanup temporary recording:', error);
+      }
+    }
     setNoteTitle('');
     setStage('recording');
     onClose();
   };
 
   const handleClose = () => {
-    cancelRecording();
+    if (currentRecording?.isTemporary) {
+      // Clean up temporary file
+      cancelRecording().catch(console.error);
+    }
     setNoteTitle('');
     setStage('recording');
     onClose();
@@ -244,12 +256,11 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 {/* Pull indicator */}
                 <div className="w-12 h-1 bg-vilm-border rounded-full mx-auto mb-8" />
 
-                {/* Recording Summary */}
-                <div className="text-center mb-6">
-                  <p className="text-vilm-text-secondary text-sm">
-                    Recording completed • {formatTime(recordingState.duration)}
-                  </p>
-                </div>
+                 <div className="text-center mb-6">
+                   <p className="text-vilm-text-secondary text-sm">
+                     Recording completed • {formatTime(currentRecording?.duration || 0)}
+                   </p>
+                 </div>
 
                 {/* Title Input */}
                 <div className="mb-8">

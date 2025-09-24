@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { realmVilmStorage } from '@/services/realmStorage';
 import { MainFeed } from './pages/MainFeed';
 import { DetailView } from './pages/DetailView';
 import { Vilm, AppView } from './types/vilm';
@@ -13,11 +14,15 @@ import { useVilmStorage } from './hooks/useVilmStorage';
 
 const queryClient = new QueryClient();
 
-const App = () => {
+const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
   const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
   
-  // Initialize native hooks
+  // Initialize Realm storage and hooks
+  React.useEffect(() => {
+    realmVilmStorage.init().catch(console.error);
+  }, []);
+  
   useStatusBar();
   const { notification } = useHaptics();
   const { deleteVilm } = useVilmStorage();
@@ -40,7 +45,6 @@ const App = () => {
           text: selectedVilm.transcript,
         });
       } catch (error) {
-        // Fallback for browsers without native share
         navigator.clipboard.writeText(selectedVilm.transcript);
         notification('success');
       }
@@ -61,26 +65,29 @@ const App = () => {
   };
 
   return (
+    <div className="min-h-screen-safe bg-background">
+      {currentView === 'feed' && (
+        <MainFeed onVilmClick={handleVilmClick} />
+      )}
+      
+      {currentView === 'detail' && selectedVilm && (
+        <DetailView
+          vilm={selectedVilm}
+          onBack={handleBack}
+          onShare={handleShare}
+          onDelete={handleDelete}
+        />
+      )}
+    </div>
+  );
+};
+
+const App = () => {
+  return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-        <div className="min-h-screen-safe bg-background">
-          {currentView === 'feed' && (
-            <MainFeed
-              onVilmClick={handleVilmClick}
-            />
-          )}
-          
-          {currentView === 'detail' && selectedVilm && (
-            <DetailView
-              vilm={selectedVilm}
-              onBack={handleBack}
-              onShare={handleShare}
-              onDelete={handleDelete}
-            />
-          )}
-        </div>
-        
+          <AppContent />
           <Toaster />
           <Sonner />
         </TooltipProvider>

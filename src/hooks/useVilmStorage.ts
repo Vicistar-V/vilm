@@ -1,103 +1,113 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Vilm } from '@/types/vilm';
-import { vilmStorage } from '@/services/storage';
-import { audioService } from '@/services/audioService';
+import { realmVilmStorage } from '@/services/realmStorage';
+import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
 
 export const useVilmStorage = () => {
   const [vilms, setVilms] = useState<Vilm[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadVilms = useCallback(async () => {
+  const loadVilms = async () => {
     try {
       setLoading(true);
       setError(null);
-      const loadedVilms = await vilmStorage.getAllVilms();
+      const loadedVilms = await realmVilmStorage.getAllVilms();
       setVilms(loadedVilms);
     } catch (err) {
-      setError('Failed to load vilms');
-      console.error('Error loading vilms:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load vilms');
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const createVilm = useCallback(async (
-    title: string, 
-    audioBlob: Blob, 
-    duration: number,
-    transcript: string = ''
-  ): Promise<Vilm> => {
+  const createVilm = async (title: string, transcript: string, duration: number, tempRecording: AudioRecording): Promise<void> => {
     try {
-      const id = crypto.randomUUID();
-      const filename = audioService.generateAudioFilename();
+      setError(null);
       
-      // Save audio file
-      const audioPath = await audioService.saveAudioFile(audioBlob, filename);
+      // Generate a unique ID for the vilm
+      const id = nativeAudioService.generateAudioId();
       
-      const newVilm: Vilm = {
+      // Move audio file from temporary to permanent location
+      const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
+      
+      // Create the vilm object
+      const vilm = {
         id,
-        title: title.trim() || `Recording ${new Date().toLocaleDateString()}`,
+        title,
         transcript,
         duration,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        audioFilename: filename,
-        audioPath
+        audioFilename
       };
-
-      await vilmStorage.saveVilm(newVilm);
-      await loadVilms(); // Refresh the list
       
-      return newVilm;
+      // Save to Realm storage
+      await realmVilmStorage.saveVilm(vilm);
+      
+      // Reload the list
+      await loadVilms();
     } catch (err) {
-      setError('Failed to create vilm');
-      console.error('Error creating vilm:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create vilm');
       throw err;
     }
-  }, [loadVilms]);
+  };
 
-  const deleteVilm = useCallback(async (id: string) => {
+  const deleteVilm = async (id: string): Promise<void> => {
     try {
-      const vilm = await vilmStorage.getVilmById(id);
+      setError(null);
+      
+      // Get the vilm to find the audio filename
+      const vilm = await realmVilmStorage.getVilmById(id);
+      
       if (vilm?.audioFilename) {
-        // Delete audio file
-        await audioService.deleteAudioFile(vilm.audioFilename);
+        // Delete the audio file
+        await nativeAudioService.deleteAudioFile(vilm.audioFilename);
       }
       
-      await vilmStorage.deleteVilm(id);
-      await loadVilms(); // Refresh the list
+      // Delete from Realm storage
+      await realmVilmStorage.deleteVilm(id);
+      
+      // Reload the list
+      await loadVilms();
     } catch (err) {
-      setError('Failed to delete vilm');
-      console.error('Error deleting vilm:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete vilm');
       throw err;
     }
-  }, [loadVilms]);
+  };
 
-  const getVilmById = useCallback(async (id: string): Promise<Vilm | null> => {
+  const getVilmById = async (id: string): Promise<Vilm | null> => {
     try {
-      return await vilmStorage.getVilmById(id);
+      setError(null);
+      return await realmVilmStorage.getVilmById(id);
     } catch (err) {
-      console.error('Error getting vilm by id:', err);
+      setError(err instanceof Error ? err.message : 'Failed to get vilm');
       return null;
     }
-  }, []);
+  };
 
-  const searchVilms = useCallback(async (query: string): Promise<Vilm[]> => {
+  const searchVilms = async (query: string): Promise<Vilm[]> => {
     try {
-      if (!query.trim()) {
-        return vilms;
-      }
-      return await vilmStorage.searchVilms(query);
+      setError(null);
+      return await realmVilmStorage.searchVilms(query);
     } catch (err) {
-      console.error('Error searching vilms:', err);
+      setError(err instanceof Error ? err.message : 'Failed to search vilms');
       return [];
     }
-  }, [vilms]);
+  };
 
   useEffect(() => {
-    loadVilms();
-  }, [loadVilms]);
+    // Initialize Realm and load data
+    const initialize = async () => {
+      try {
+        await realmVilmStorage.init();
+        await loadVilms();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to initialize storage');
+        setLoading(false);
+      }
+    };
+
+    initialize();
+  }, []);
 
   return {
     vilms,

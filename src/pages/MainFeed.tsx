@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Vilm } from '@/types/vilm';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useVilmStorage } from '@/hooks/useVilmStorage';
+import { AudioRecording } from '@/services/nativeAudioService';
 
 interface MainFeedProps {
   onVilmClick: (vilm: Vilm) => void;
@@ -29,9 +30,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     setIsRecordingModalOpen(false);
   };
 
-  const handleSaveVilm = async (title: string, audioBlob: Blob, duration: number) => {
+  const handleSaveVilm = async (title: string, transcript: string, duration: number, recording: AudioRecording) => {
     try {
-      await createVilm(title, audioBlob, duration);
+      await createVilm(title, transcript, duration, recording);
       handleCloseRecording();
     } catch (error) {
       console.error('Failed to save vilm:', error);

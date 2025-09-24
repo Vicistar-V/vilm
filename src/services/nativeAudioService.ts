@@ -1,0 +1,321 @@
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { v4 as uuidv4 } from 'uuid';
+
+export interface AudioRecording {
+  id: string;
+  path: string;
+  duration: number;
+  size: number;
+  isTemporary: boolean;
+}
+
+class NativeAudioService {
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private startTime: number = 0;
+  private tempAudioDirectory = 'vilm-temp-audio';
+  private audioDirectory = 'vilm-audio';
+  private currentRecordingId: string | null = null;
+
+  async requestPermissions(): Promise<boolean> {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      console.error('Audio permission denied:', error);
+      return false;
+    }
+  }
+
+  async startRecording(): Promise<{ success: boolean; recordingId?: string }> {
+    try {
+      const hasPermission = await this.requestPermissions();
+      if (!hasPermission) {
+        throw new Error('Audio permission required');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        } 
+      });
+
+      // Use AAC codec for better mobile compatibility (closer to m4a)
+      let mimeType = 'audio/webm;codecs=opus';
+      if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
+        mimeType = 'audio/mp4;codecs=mp4a.40.2'; // AAC in MP4
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      }
+
+      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+      this.audioChunks = [];
+      this.startTime = Date.now();
+      this.currentRecordingId = uuidv4();
+
+      // Ensure temp directory exists
+      await this.ensureTempAudioDirectory();
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.audioChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.start(1000);
+      return { success: true, recordingId: this.currentRecordingId };
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      this.currentRecordingId = null;
+      return { success: false };
+    }
+  }
+
+  async stopRecording(): Promise<AudioRecording | null> {
+    return new Promise((resolve) => {
+      if (!this.mediaRecorder || !this.currentRecordingId) {
+        resolve(null);
+        return;
+      }
+
+      const recordingId = this.currentRecordingId;
+      const duration = this.getCurrentDuration();
+
+      this.mediaRecorder.onstop = async () => {
+        try {
+          // Create audio blob
+          const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+          const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+          
+          // Save to temporary location
+          const tempFilename = this.generateTempAudioFilename(recordingId);
+          const tempPath = await this.saveTemporaryAudioFile(audioBlob, tempFilename);
+          
+          // Stop all tracks
+          if (this.mediaRecorder?.stream) {
+            this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          }
+          
+          this.mediaRecorder = null;
+          this.audioChunks = [];
+          this.currentRecordingId = null;
+
+          const recording: AudioRecording = {
+            id: recordingId,
+            path: tempPath,
+            duration,
+            size: audioBlob.size,
+            isTemporary: true
+          };
+
+          resolve(recording);
+        } catch (error) {
+          console.error('Failed to save temporary recording:', error);
+          resolve(null);
+        }
+      };
+
+      this.mediaRecorder.stop();
+    });
+  }
+
+  async saveRecordingPermanently(tempRecording: AudioRecording): Promise<string> {
+    try {
+      // Generate permanent filename with .m4a extension
+      const permanentFilename = `${tempRecording.id}.m4a`;
+      
+      // Ensure permanent directory exists
+      await this.ensureAudioDirectory();
+      
+      // Read temporary file
+      const tempFileResult = await Filesystem.readFile({
+        path: `${this.tempAudioDirectory}/${this.getTempFilename(tempRecording.id)}`,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8
+      });
+
+      // Write to permanent location
+      await Filesystem.writeFile({
+        path: `${this.audioDirectory}/${permanentFilename}`,
+        data: tempFileResult.data,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8
+      });
+
+      // Clean up temporary file
+      await this.deleteTemporaryRecording(tempRecording.id);
+
+      return permanentFilename;
+    } catch (error) {
+      console.error('Failed to save recording permanently:', error);
+      throw error;
+    }
+  }
+
+  async deleteTemporaryRecording(recordingId: string): Promise<void> {
+    try {
+      const tempFilename = this.getTempFilename(recordingId);
+      await Filesystem.deleteFile({
+        path: `${this.tempAudioDirectory}/${tempFilename}`,
+        directory: Directory.Data
+      });
+    } catch (error) {
+      console.error('Failed to delete temporary recording:', error);
+      // Don't throw - cleanup failures shouldn't break the app
+    }
+  }
+
+  getCurrentDuration(): number {
+    if (!this.startTime) return 0;
+    return Math.floor((Date.now() - this.startTime) / 1000);
+  }
+
+  isRecording(): boolean {
+    return this.mediaRecorder?.state === 'recording';
+  }
+
+  async getAudioFile(filename: string): Promise<string> {
+    try {
+      const result = await Filesystem.readFile({
+        path: `${this.audioDirectory}/${filename}`,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8
+      });
+
+      // Determine MIME type based on extension
+      let mimeType = 'audio/m4a';
+      if (filename.endsWith('.webm')) {
+        mimeType = 'audio/webm';
+      } else if (filename.endsWith('.mp4')) {
+        mimeType = 'audio/mp4';
+      }
+
+      return `data:${mimeType};base64,${result.data}`;
+    } catch (error) {
+      console.error('Failed to read audio file:', error);
+      throw error;
+    }
+  }
+
+  async deleteAudioFile(filename: string): Promise<void> {
+    try {
+      await Filesystem.deleteFile({
+        path: `${this.audioDirectory}/${filename}`,
+        directory: Directory.Data
+      });
+    } catch (error) {
+      console.error('Failed to delete audio file:', error);
+      throw error;
+    }
+  }
+
+  async cleanupAbandonedTempFiles(): Promise<void> {
+    try {
+      const tempDir = await Filesystem.readdir({
+        path: this.tempAudioDirectory,
+        directory: Directory.Data
+      });
+
+      // Delete all temporary files older than 1 hour
+      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      
+      for (const file of tempDir.files) {
+        if (file.name.startsWith('temp_')) {
+          try {
+            const stat = await Filesystem.stat({
+              path: `${this.tempAudioDirectory}/${file.name}`,
+              directory: Directory.Data
+            });
+            
+            if (stat.mtime < oneHourAgo) {
+              await Filesystem.deleteFile({
+                path: `${this.tempAudioDirectory}/${file.name}`,
+                directory: Directory.Data
+              });
+            }
+          } catch (error) {
+            // Ignore errors for individual file cleanup
+          }
+        }
+      }
+    } catch (error) {
+      // Ignore if temp directory doesn't exist
+    }
+  }
+
+  private async ensureAudioDirectory(): Promise<void> {
+    try {
+      await Filesystem.mkdir({
+        path: this.audioDirectory,
+        directory: Directory.Data,
+        recursive: true
+      });
+    } catch (error) {
+      if (!error.message?.includes('Directory exists')) {
+        throw error;
+      }
+    }
+  }
+
+  private async ensureTempAudioDirectory(): Promise<void> {
+    try {
+      await Filesystem.mkdir({
+        path: this.tempAudioDirectory,
+        directory: Directory.Data,
+        recursive: true
+      });
+    } catch (error) {
+      if (!error.message?.includes('Directory exists')) {
+        throw error;
+      }
+    }
+  }
+
+  private async saveTemporaryAudioFile(audioBlob: Blob, filename: string): Promise<string> {
+    try {
+      const base64Audio = await this.blobToBase64(audioBlob);
+      
+      const result = await Filesystem.writeFile({
+        path: `${this.tempAudioDirectory}/${filename}`,
+        data: base64Audio,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8
+      });
+
+      return result.uri;
+    } catch (error) {
+      console.error('Failed to save temporary audio file:', error);
+      throw error;
+    }
+  }
+
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private generateTempAudioFilename(recordingId: string): string {
+    return `temp_${recordingId}_${Date.now()}.webm`;
+  }
+
+  private getTempFilename(recordingId: string): string {
+    // For cleanup, we need to find temp files by recordingId
+    return `temp_${recordingId}_${Date.now()}.webm`;
+  }
+
+  generateAudioId(): string {
+    return uuidv4();
+  }
+}
+
+export const nativeAudioService = new NativeAudioService();

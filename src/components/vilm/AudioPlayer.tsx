@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, AlertCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
-import { audioService } from '@/services/audioService';
+import { nativeAudioService } from '@/services/nativeAudioService';
 
 interface AudioPlayerProps {
   audioFilename?: string;
@@ -48,7 +48,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         setIsLoading(true);
         setError(null);
         
-        const url = await audioService.getAudioFile(audioFilename);
+        const url = await nativeAudioService.getAudioFile(audioFilename);
         setAudioUrl(url);
         
         // Create audio element
