@@ -15,6 +15,10 @@ const config: CapacitorConfig = {
     },
     Haptics: {
       enabled: true
+    },
+    SpeechRecognition: {
+      language: 'en-US',
+      popup: false
     }
   }
 };

@@ -3,10 +3,12 @@ import { ArrowLeft, Share, Trash2, FileText, Download, Copy } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AudioPlayer } from '@/components/vilm/AudioPlayer';
+import { ShareMenu } from '@/components/vilm/ShareMenu';
 import { Vilm } from '@/types/vilm';
 import { useHaptics } from '@/hooks/useHaptics';
 import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
+import { ImpactStyle } from '@capacitor/haptics';
 
 interface DetailViewProps {
   vilm: Vilm;
@@ -20,7 +22,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const { toast } = useToast();
 
   const handleBack = async () => {
-    await impact('light');
+    await impact(ImpactStyle.Light);
     onBack();
   };
 
@@ -30,13 +32,13 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   };
 
   const handleDelete = async () => {
-    await impact('medium');
+    await impact(ImpactStyle.Medium);
     onDelete(vilm);
   };
 
   const handleShareTranscript = async () => {
     try {
-      await impact('light');
+      await impact(ImpactStyle.Light);
       await sharingService.shareTranscript(vilm);
     } catch (error) {
       toast({
@@ -49,7 +51,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
 
   const handleCopyTranscript = async () => {
     try {
-      await impact('light');
+      await impact(ImpactStyle.Light);
       if (vilm.transcript) {
         await navigator.clipboard.writeText(vilm.transcript);
         toast({
@@ -149,22 +151,18 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
 
       {/* Bottom Actions */}
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-4 py-3 flex gap-3">
-          <Button
-            onClick={handleShare}
-            className="flex-1"
-            variant="outline"
-          >
-            <Share className="w-4 h-4 mr-2" />
-            Share
-          </Button>
+        <div className="px-4 py-3 space-y-2">
+          {/* Share Menu */}
+          <ShareMenu vilm={vilm} />
+          
+          {/* Delete Action */}
           <Button
             onClick={handleDelete}
             variant="destructive"
-            className="flex-1"
+            className="w-full"
           >
             <Trash2 className="w-4 h-4 mr-2" />
-            Delete
+            Delete Vilm
           </Button>
         </div>
       </div>

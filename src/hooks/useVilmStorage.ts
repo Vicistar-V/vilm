@@ -3,6 +3,7 @@ import { Vilm } from '@/types/vilm';
 import { realmVilmStorage } from '@/services/realmStorage';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
 import { transcriptionService } from '@/services/transcriptionService';
+import { permissionsService } from '@/services/permissionsService';
 import { v4 as uuidv4 } from 'uuid';
 
 export const useVilmStorage = () => {
@@ -100,12 +101,19 @@ export const useVilmStorage = () => {
   };
 
   useEffect(() => {
-    // Initialize Realm and load data
+    // Initialize services and load data
     const initialize = async () => {
       try {
+        // Initialize permissions service
+        await permissionsService.initialize();
+        
+        // Initialize Realm storage
         await realmVilmStorage.init();
+        
         // Clean up any abandoned temporary audio files on startup
         await nativeAudioService.cleanupAbandonedTempFiles();
+        
+        // Load vilms
         await loadVilms();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to initialize storage');

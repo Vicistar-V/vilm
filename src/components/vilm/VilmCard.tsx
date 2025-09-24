@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Play, Clock, FileText } from "lucide-react";
 import { Vilm } from "@/types/vilm";
+import { TranscriptionStatus } from "@/components/vilm/TranscriptionStatus";
 
 interface VilmCardProps {
   vilm: Vilm;
@@ -14,6 +15,8 @@ const formatDuration = (seconds: number): string => {
 };
 
 export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
+  const hasTranscript = vilm.transcript && vilm.transcript.trim() !== '';
+  
   return (
     <Card 
       className="p-4 cursor-pointer hover:bg-accent/50 transition-colors active:scale-95 transform duration-150"
@@ -25,11 +28,13 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
             <h3 className="font-semibold text-foreground truncate">
               {vilm.title}
             </h3>
-            {vilm.transcript && vilm.transcript.trim() !== '' && (
-              <FileText className="w-3 h-3 text-primary flex-shrink-0" />
-            )}
+            <TranscriptionStatus 
+              transcript={vilm.transcript}
+              className="flex-shrink-0"
+            />
           </div>
-          {vilm.transcript && vilm.transcript.trim() !== '' ? (
+          
+          {hasTranscript ? (
             <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
               {vilm.transcript}
             </p>
@@ -38,6 +43,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
               Transcription in progress...
             </p>
           )}
+          
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock className="w-3 h-3" />
             <span>{formatDuration(vilm.duration)}</span>
