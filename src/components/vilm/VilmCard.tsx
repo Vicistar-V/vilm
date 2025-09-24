@@ -1,81 +1,56 @@
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { Vilm } from '@/types/vilm';
-import { formatDistanceToNow } from 'date-fns';
+import { Card } from "@/components/ui/card";
+import { Play, Clock, FileText } from "lucide-react";
+import { Vilm } from "@/types/vilm";
 
 interface VilmCardProps {
   vilm: Vilm;
   onClick: () => void;
-  className?: string;
 }
 
 const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 };
 
-export const VilmCard: React.FC<VilmCardProps> = ({
-  vilm,
-  onClick,
-  className
-}) => {
-  const previewText = vilm.transcript.length > 120 
-    ? vilm.transcript.substring(0, 120) + '...' 
-    : vilm.transcript;
-
+export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
   return (
-    <div
+    <Card 
+      className="p-4 cursor-pointer hover:bg-accent/50 transition-colors active:scale-95 transform duration-150"
       onClick={onClick}
-      className={cn(
-        // Card container with mobile-optimized touch target
-        "bg-card border border-vilm-border rounded-xl p-4",
-        "min-h-[88px] cursor-pointer transition-all duration-200",
-        "shadow-sm hover:shadow-md active:shadow-sm",
-        
-        // Interactive states with haptic-like visual feedback
-        "active:scale-[0.98] active:bg-vilm-hover",
-        "hover:border-vilm-primary/20 hover:bg-vilm-hover/50",
-        
-        // Focus state for accessibility
-        "focus:outline-none focus:ring-2 focus:ring-vilm-primary/20 focus:ring-offset-2",
-        
-        className
-      )}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
     >
-      {/* Title */}
-      <h3 className={cn(
-        "font-semibold text-vilm-text-primary text-base leading-tight mb-2",
-        "line-clamp-1"
-      )}>
-        {vilm.title || `Note from ${vilm.createdAt.toLocaleDateString()}`}
-      </h3>
-      
-      {/* Transcript Preview */}
-      <p className={cn(
-        "text-vilm-text-secondary text-sm leading-relaxed mb-3",
-        "line-clamp-2"
-      )}>
-        {previewText}
-      </p>
-      
-      {/* Metadata Bar */}
-      <div className="flex items-center justify-between text-xs text-vilm-text-tertiary">
-        <span>
-          {formatDistanceToNow(vilm.createdAt, { addSuffix: true })}
-        </span>
-        <span className="font-medium">
-          {formatDuration(vilm.duration)}
-        </span>
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0 mr-3">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-foreground truncate">
+              {vilm.title}
+            </h3>
+            {vilm.transcript && vilm.transcript.trim() !== '' && (
+              <FileText className="w-3 h-3 text-primary flex-shrink-0" />
+            )}
+          </div>
+          {vilm.transcript && vilm.transcript.trim() !== '' ? (
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+              {vilm.transcript}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground/70 italic mb-2">
+              Transcription in progress...
+            </p>
+          )}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            <span>{formatDuration(vilm.duration)}</span>
+            <span>•</span>
+            <span>{vilm.createdAt.toLocaleDateString()}</span>
+          </div>
+        </div>
+        <div className="flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Play className="w-4 h-4 text-primary" />
+          </div>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };

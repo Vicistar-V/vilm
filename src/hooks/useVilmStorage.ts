@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Vilm } from '@/types/vilm';
 import { realmVilmStorage } from '@/services/realmStorage';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
+import { transcriptionService } from '@/services/transcriptionService';
+import { v4 as uuidv4 } from 'uuid';
 
 export const useVilmStorage = () => {
   const [vilms, setVilms] = useState<Vilm[]>([]);
@@ -26,7 +28,7 @@ export const useVilmStorage = () => {
       setError(null);
       
       // Generate a unique ID for the vilm
-      const id = nativeAudioService.generateAudioId();
+      const id = uuidv4();
       
       // Move audio file from temporary to permanent location
       const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
@@ -42,6 +44,9 @@ export const useVilmStorage = () => {
       
       // Save to Realm storage
       await realmVilmStorage.saveVilm(vilm);
+      
+      // Start transcription process in background (don't wait for it)
+      startTranscriptionProcess(id, audioFilename);
       
       // Reload the list
       await loadVilms();
@@ -111,6 +116,25 @@ export const useVilmStorage = () => {
     initialize();
   }, []);
 
+  const startTranscriptionProcess = async (vilmId: string, audioFilename: string) => {
+    try {
+      const result = await transcriptionService.transcribeAudio(audioFilename);
+      
+      if (result.isSuccess && result.transcript.trim()) {
+        // Update the vilm with the transcription
+        await realmVilmStorage.updateVilm(vilmId, {
+          transcript: result.transcript
+        });
+        
+        // Reload vilms to show updated transcript
+        await loadVilms();
+      }
+    } catch (error) {
+      console.error('Background transcription failed:', error);
+      // Don't throw - transcription failure shouldn't break the app
+    }
+  };
+
   return {
     vilms,
     loading,
@@ -119,6 +143,7 @@ export const useVilmStorage = () => {
     deleteVilm,
     getVilmById,
     searchVilms,
-    refreshVilms: loadVilms
+    refreshVilms: loadVilms,
+    transcriptionService
   };
 };
