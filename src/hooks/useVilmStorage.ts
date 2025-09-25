@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Vilm } from '@/types/vilm';
-import { realmVilmStorage } from '@/services/realmStorage';
+import { dexieVilmStorage } from '@/services/dexieStorage';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
 import { transcriptionService } from '@/services/transcriptionService';
 import { permissionsService } from '@/services/permissionsService';
@@ -15,7 +15,7 @@ export const useVilmStorage = () => {
     try {
       setLoading(true);
       setError(null);
-      const loadedVilms = await realmVilmStorage.getAllVilms();
+      const loadedVilms = await dexieVilmStorage.getAllVilms();
       setVilms(loadedVilms);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load vilms');
@@ -43,8 +43,8 @@ export const useVilmStorage = () => {
         audioFilename
       };
       
-      // Save to Realm storage
-      await realmVilmStorage.saveVilm(vilm);
+      // Save to Dexie storage
+      await dexieVilmStorage.saveVilm(vilm);
       
       // Start transcription process in background (don't wait for it)
       startTranscriptionProcess(id, audioFilename);
@@ -62,15 +62,15 @@ export const useVilmStorage = () => {
       setError(null);
       
       // Get the vilm to find the audio filename
-      const vilm = await realmVilmStorage.getVilmById(id);
+      const vilm = await dexieVilmStorage.getVilmById(id);
       
       if (vilm?.audioFilename) {
         // Delete the audio file
         await nativeAudioService.deleteAudioFile(vilm.audioFilename);
       }
       
-      // Delete from Realm storage
-      await realmVilmStorage.deleteVilm(id);
+      // Delete from Dexie storage
+      await dexieVilmStorage.deleteVilm(id);
       
       // Reload the list
       await loadVilms();
@@ -83,7 +83,7 @@ export const useVilmStorage = () => {
   const getVilmById = async (id: string): Promise<Vilm | null> => {
     try {
       setError(null);
-      return await realmVilmStorage.getVilmById(id);
+      return await dexieVilmStorage.getVilmById(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get vilm');
       return null;
@@ -93,7 +93,7 @@ export const useVilmStorage = () => {
   const searchVilms = async (query: string): Promise<Vilm[]> => {
     try {
       setError(null);
-      return await realmVilmStorage.searchVilms(query);
+      return await dexieVilmStorage.searchVilms(query);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search vilms');
       return [];
@@ -107,8 +107,8 @@ export const useVilmStorage = () => {
         // Initialize permissions service
         await permissionsService.initialize();
         
-        // Initialize Realm storage
-        await realmVilmStorage.init();
+        // Initialize Dexie storage
+        await dexieVilmStorage.init();
         
         // Clean up any abandoned temporary audio files on startup
         await nativeAudioService.cleanupAbandonedTempFiles();
@@ -130,7 +130,7 @@ export const useVilmStorage = () => {
       
       if (result.isSuccess && result.transcript.trim()) {
         // Update the vilm with the transcription
-        await realmVilmStorage.updateVilm(vilmId, {
+        await dexieVilmStorage.updateVilm(vilmId, {
           transcript: result.transcript
         });
         

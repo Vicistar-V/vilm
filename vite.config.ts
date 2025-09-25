@@ -15,17 +15,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  build: {
-    commonjsOptions: {
-      include: [/realm/, /node_modules/]
-    },
-    rollupOptions: {
-      external: ['realm']
-    }
-  },
-  optimizeDeps: {
-    exclude: ['realm']
-  },
   define: {
     global: 'globalThis',
   },

@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import { realmVilmStorage } from '@/services/realmStorage';
 import { MainFeed } from './pages/MainFeed';
 import { DetailView } from './pages/DetailView';
 import { Vilm, AppView } from './types/vilm';
@@ -17,11 +16,6 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
   const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
-  
-  // Initialize Realm storage and hooks
-  React.useEffect(() => {
-    realmVilmStorage.init().catch(console.error);
-  }, []);
   
   useStatusBar();
   const { notification } = useHaptics();
