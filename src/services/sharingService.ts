@@ -175,24 +175,48 @@ class SharingService {
 
   private async cleanupTempShareFiles(): Promise<void> {
     try {
+      // Ensure temp_share directory exists first
+      try {
+        await Filesystem.mkdir({
+          path: 'temp_share',
+          directory: Directory.Cache,
+          recursive: true
+        });
+      } catch (mkdirError) {
+        // Directory might already exist, continue
+        console.debug('Temp share directory already exists or mkdir failed:', mkdirError);
+      }
+
       // Clean up temporary share files
       const result = await Filesystem.readdir({
         path: 'temp_share',
         directory: Directory.Cache
       });
 
+      if (!result.files || result.files.length === 0) {
+        console.debug('No temporary share files to cleanup');
+        return;
+      }
+
+      console.debug(`Cleaning up ${result.files.length} temporary share files`);
+      
       for (const file of result.files) {
+        if (!file.name) continue;
+        
         try {
           await Filesystem.deleteFile({
             path: `temp_share/${file.name}`,
             directory: Directory.Cache
           });
-        } catch (error) {
-          console.error('Failed to cleanup temp share file:', error);
+          console.debug(`Successfully deleted temp share file: ${file.name}`);
+        } catch (deleteError) {
+          console.error(`Failed to cleanup temp share file ${file.name}:`, deleteError);
+          // Continue with other files even if one fails
         }
       }
     } catch (error) {
-      // Directory might not exist, which is fine
+      console.error('Failed to cleanup temporary share files:', error);
+      // Don't throw error as this is cleanup - shouldn't break the app
     }
   }
 
