@@ -139,16 +139,14 @@ class NativeAudioService {
       // Read temporary file as base64 for binary audio data
       const tempFileResult = await Filesystem.readFile({
         path: `${this.tempAudioDirectory}/${tempFilename}`,
-        directory: Directory.Data,
-        encoding: Encoding.UTF8 // This reads as base64 for binary files
+        directory: Directory.Data
       });
 
       // Write to permanent location
       await Filesystem.writeFile({
         path: `${this.audioDirectory}/${permanentFilename}`,
         data: tempFileResult.data,
-        directory: Directory.Data,
-        encoding: Encoding.UTF8
+        directory: Directory.Data
       });
 
       // Clean up temporary file
@@ -189,8 +187,7 @@ class NativeAudioService {
     try {
       const result = await Filesystem.readFile({
         path: `${this.audioDirectory}/${filename}`,
-        directory: Directory.Data,
-        encoding: Encoding.UTF8
+        directory: Directory.Data
       });
 
       // Determine MIME type based on extension
@@ -289,8 +286,7 @@ class NativeAudioService {
       const result = await Filesystem.writeFile({
         path: `${this.tempAudioDirectory}/${filename}`,
         data: base64Audio,
-        directory: Directory.Data,
-        encoding: Encoding.UTF8
+        directory: Directory.Data
       });
 
       return result.uri;

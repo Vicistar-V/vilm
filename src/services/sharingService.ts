@@ -63,8 +63,7 @@ class SharingService {
           await Filesystem.writeFile({
             path: `temp_share/${tempFileName}`,
             data: base64Data,
-            directory: Directory.Cache,
-            encoding: Encoding.UTF8
+            directory: Directory.Cache
           });
 
           // Get the file URI for sharing

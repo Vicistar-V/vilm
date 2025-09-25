@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Share, Trash2, FileText, Download, Copy } from 'lucide-react';
+import { ArrowLeft, Share, Trash2, FileText, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AudioPlayer } from '@/components/vilm/AudioPlayer';
@@ -9,6 +9,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
 import { ImpactStyle } from '@capacitor/haptics';
+import { Clipboard } from '@capacitor/clipboard';
 
 interface DetailViewProps {
   vilm: Vilm;
@@ -53,7 +54,9 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
     try {
       await impact(ImpactStyle.Light);
       if (vilm.transcript) {
-        await navigator.clipboard.writeText(vilm.transcript);
+        await Clipboard.write({
+          string: vilm.transcript
+        });
         toast({
           title: "Copied",
           description: "Transcript copied to clipboard"

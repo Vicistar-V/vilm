@@ -7,6 +7,7 @@ import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
+import { Clipboard } from '@capacitor/clipboard';
 
 interface ShareMenuProps {
   vilm: Vilm;
@@ -134,7 +135,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
         return;
       }
       
-      await navigator.clipboard.writeText(vilm.transcript);
+      await Clipboard.write({
+        string: vilm.transcript
+      });
       
       toast({
         title: "Copied",
