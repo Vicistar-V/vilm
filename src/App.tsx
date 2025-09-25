@@ -10,6 +10,7 @@ import { Vilm, AppView } from './types/vilm';
 import { useStatusBar } from './hooks/useStatusBar';
 import { useHaptics } from './hooks/useHaptics';
 import { useVilmStorage } from './hooks/useVilmStorage';
+import { sharingService } from './services/sharingService';
 
 const queryClient = new QueryClient();
 
@@ -34,13 +35,11 @@ const AppContent = () => {
   const handleShare = async () => {
     if (selectedVilm) {
       try {
-        await navigator.share({
-          title: selectedVilm.title || 'Vilm Note',
-          text: selectedVilm.transcript,
-        });
-      } catch (error) {
-        navigator.clipboard.writeText(selectedVilm.transcript);
+        await sharingService.shareVilm(selectedVilm);
         notification('success');
+      } catch (error) {
+        console.error('Failed to share vilm:', error);
+        notification('error');
       }
     }
   };
