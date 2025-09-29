@@ -11,18 +11,18 @@ class FeedbackService {
   
   async submitFeedback(message: string): Promise<boolean> {
     try {
-      const submission: FeedbackSubmission = {
-        message: message.trim(),
-        timestamp: new Date().toISOString(),
-        appVersion: '1.0.0' // You can get this from package.json or config
-      };
+      // Formspark expects form-encoded data, not JSON
+      const formData = new URLSearchParams();
+      formData.append('message', message.trim());
+      formData.append('timestamp', new Date().toISOString());
+      formData.append('appVersion', '1.0.0');
 
       const response = await CapacitorHttp.post({
         url: this.endpoint,
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data: submission,
+        data: formData.toString(),
       });
 
       return response.status >= 200 && response.status < 300;
