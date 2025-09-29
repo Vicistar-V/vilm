@@ -26,7 +26,7 @@ class FeedbackService {
         },
         data: formData.toString(),
         webFetchExtra: {
-          mode: 'cors',
+          mode: 'no-cors',
           credentials: 'omit'
         }
       });
