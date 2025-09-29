@@ -21,8 +21,14 @@ class FeedbackService {
         url: this.endpoint,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': '*/*',
+          'Origin': window.location.origin,
         },
         data: formData.toString(),
+        webFetchExtra: {
+          mode: 'cors',
+          credentials: 'omit'
+        }
       });
 
       return response.status >= 200 && response.status < 300;
