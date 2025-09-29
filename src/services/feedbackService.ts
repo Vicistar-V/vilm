@@ -7,7 +7,7 @@ interface FeedbackSubmission {
 }
 
 class FeedbackService {
-  private readonly endpoint = 'https://submit-form.com/your-form-id'; // Replace with actual Formspark endpoint
+  private readonly endpoint = 'https://submit-form.com/utj9PoQO4';
   
   async submitFeedback(message: string): Promise<boolean> {
     try {
