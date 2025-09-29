@@ -41,6 +41,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
     try {
       const success = await feedbackService.submitFeedback(message);
+      console.debug('Feedback submission result:', success);
       
       if (success) {
         setIsSuccess(true);
