@@ -21,6 +21,7 @@
     "@capacitor/device": "^7.0.2",
     "@capacitor/filesystem": "^7.1.4",
     "@capacitor/haptics": "^7.0.2",
+    "@capacitor/http": "^0.0.2",
     "@capacitor/ios": "^7.4.3",
     "@capacitor/share": "^7.0.2",
     "@capacitor/status-bar": "^7.0.3",

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { MainFeed } from './pages/MainFeed';
 import { DetailView } from './pages/DetailView';
+import { Settings } from './pages/Settings';
 import { Vilm, AppView } from './types/vilm';
 import { useStatusBar } from './hooks/useStatusBar';
 import { useHaptics } from './hooks/useHaptics';
@@ -30,6 +31,10 @@ const AppContent = () => {
   const handleBack = () => {
     setCurrentView('feed');
     setSelectedVilm(null);
+  };
+
+  const handleSettingsClick = () => {
+    setCurrentView('settings');
   };
 
   const handleShare = async () => {
@@ -60,7 +65,10 @@ const AppContent = () => {
   return (
     <div className="min-h-screen-safe bg-background">
       {currentView === 'feed' && (
-        <MainFeed onVilmClick={handleVilmClick} />
+        <MainFeed 
+          onVilmClick={handleVilmClick} 
+          onSettingsClick={handleSettingsClick}
+        />
       )}
       
       {currentView === 'detail' && selectedVilm && (
@@ -70,6 +78,10 @@ const AppContent = () => {
           onShare={handleShare}
           onDelete={handleDelete}
         />
+      )}
+
+      {currentView === 'settings' && (
+        <Settings onBack={handleBack} />
       )}
     </div>
   );

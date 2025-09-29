@@ -5,6 +5,8 @@ import { VilmCard } from '@/components/vilm/VilmCard';
 import { EmptyState } from '@/components/vilm/EmptyState';
 import { RecordingModal } from '@/components/vilm/RecordingModal';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Vilm } from '@/types/vilm';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useVilmStorage } from '@/hooks/useVilmStorage';
@@ -12,18 +14,25 @@ import { AudioRecording } from '@/services/nativeAudioService';
 
 interface MainFeedProps {
   onVilmClick: (vilm: Vilm) => void;
+  onSettingsClick: () => void;
 }
 
 export const MainFeed: React.FC<MainFeedProps> = ({
-  onVilmClick
+  onVilmClick,
+  onSettingsClick
 }) => {
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState(false);
-  const { impact } = useHaptics();
+  const { impact, selection } = useHaptics();
   const { vilms, loading, error, createVilm } = useVilmStorage();
 
   const handleOpenRecording = async () => {
     await impact();
     setIsRecordingModalOpen(true);
+  };
+
+  const handleSettingsClick = async () => {
+    await selection();
+    onSettingsClick();
   };
 
   const handleCloseRecording = () => {
@@ -55,7 +64,17 @@ export const MainFeed: React.FC<MainFeedProps> = ({
           Vilm
         </h1>
         
-        <ThemeToggle />
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSettingsClick}
+            className="text-vilm-text-secondary hover:text-vilm-text-primary"
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* Content */}

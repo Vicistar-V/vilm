@@ -17,4 +17,4 @@ export interface RecordingState {
   isProcessing: boolean;
 }
 
-export type AppView = 'feed' | 'detail' | 'recording';
+export type AppView = 'feed' | 'detail' | 'recording' | 'settings';
