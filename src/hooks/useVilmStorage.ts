@@ -34,23 +34,25 @@ export const useVilmStorage = () => {
       // Move audio file from temporary to permanent location
       const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
       
-      // Create the vilm object
+      // Create the vilm object with transcription state
       const vilm = {
         id,
         title,
         transcript,
         duration,
-        audioFilename
+        audioFilename,
+        isTranscribing: true, // Mark as currently transcribing
+        transcriptionError: undefined
       };
       
       // Save to Dexie storage
       await dexieVilmStorage.saveVilm(vilm);
       
+      // Reload the list to show the new vilm with loading state
+      await loadVilms();
+      
       // Start transcription process in background (don't wait for it)
       startTranscriptionProcess(id, audioFilename);
-      
-      // Reload the list
-      await loadVilms();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create vilm');
       throw err;
@@ -129,17 +131,35 @@ export const useVilmStorage = () => {
       const result = await transcriptionService.transcribeAudio(audioFilename);
       
       if (result.isSuccess && result.transcript.trim()) {
-        // Update the vilm with the transcription
+        // Update the vilm with successful transcription
         await dexieVilmStorage.updateVilm(vilmId, {
-          transcript: result.transcript
+          transcript: result.transcript,
+          isTranscribing: false,
+          transcriptionError: undefined
         });
-        
-        // Reload vilms to show updated transcript
-        await loadVilms();
+      } else {
+        // Update with transcription error
+        await dexieVilmStorage.updateVilm(vilmId, {
+          isTranscribing: false,
+          transcriptionError: result.error || 'Transcription failed'
+        });
       }
+      
+      // Reload vilms to show updated state
+      await loadVilms();
     } catch (error) {
       console.error('Background transcription failed:', error);
-      // Don't throw - transcription failure shouldn't break the app
+      
+      // Update with transcription error
+      try {
+        await dexieVilmStorage.updateVilm(vilmId, {
+          isTranscribing: false,
+          transcriptionError: 'Transcription service unavailable'
+        });
+        await loadVilms();
+      } catch (updateError) {
+        console.error('Failed to update vilm with error state:', updateError);
+      }
     }
   };
 

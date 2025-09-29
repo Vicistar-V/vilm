@@ -30,17 +30,28 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
             </h3>
             <TranscriptionStatus 
               transcript={vilm.transcript}
+              isTranscribing={vilm.isTranscribing}
+              transcriptionError={vilm.transcriptionError}
               className="flex-shrink-0"
             />
           </div>
           
-          {hasTranscript ? (
+          {vilm.isTranscribing ? (
+            <div className="mb-2 space-y-1">
+              <div className="h-3 bg-muted animate-pulse rounded w-full"></div>
+              <div className="h-3 bg-muted animate-pulse rounded w-3/4"></div>
+            </div>
+          ) : vilm.transcriptionError ? (
+            <p className="text-sm text-destructive/70 italic mb-2">
+              Transcription failed - tap to retry
+            </p>
+          ) : hasTranscript ? (
             <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
               {vilm.transcript}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground/70 italic mb-2">
-              Transcription in progress...
+              No transcript available
             </p>
           )}
           

@@ -16,7 +16,9 @@ class DexieVilmStorage {
       createdAt: vilmObject.timestamp,
       updatedAt: vilmObject.timestamp,
       audioFilename: vilmObject.audioFilename,
-      audioPath: undefined // Will be constructed when needed
+      audioPath: undefined, // Will be constructed when needed
+      isTranscribing: vilmObject.isTranscribing,
+      transcriptionError: vilmObject.transcriptionError
     };
   }
 
@@ -29,7 +31,9 @@ class DexieVilmStorage {
       transcript: vilm.transcript,
       timestamp: now,
       audioFilename: vilm.audioFilename || '',
-      duration: vilm.duration
+      duration: vilm.duration,
+      isTranscribing: vilm.isTranscribing,
+      transcriptionError: vilm.transcriptionError
     });
   }
 
@@ -68,6 +72,8 @@ class DexieVilmStorage {
     if (updates.transcript !== undefined) updateData.transcript = updates.transcript;
     if (updates.duration !== undefined) updateData.duration = updates.duration;
     if (updates.audioFilename !== undefined) updateData.audioFilename = updates.audioFilename;
+    if (updates.isTranscribing !== undefined) updateData.isTranscribing = updates.isTranscribing;
+    if (updates.transcriptionError !== undefined) updateData.transcriptionError = updates.transcriptionError;
     
     await vilmDB.vilms.update(id, updateData);
   }

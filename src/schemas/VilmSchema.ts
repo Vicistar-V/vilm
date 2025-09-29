@@ -7,6 +7,8 @@ export interface VilmObject {
   timestamp: Date;
   audioFilename: string;
   duration: number;
+  isTranscribing?: boolean;
+  transcriptionError?: string;
 }
 
 export class VilmDatabase extends Dexie {
@@ -15,7 +17,7 @@ export class VilmDatabase extends Dexie {
   constructor() {
     super('VilmDatabase');
     this.version(1).stores({
-      vilms: 'id, title, transcript, timestamp, audioFilename, duration'
+      vilms: 'id, title, transcript, timestamp, audioFilename, duration, isTranscribing, transcriptionError'
     });
   }
 }

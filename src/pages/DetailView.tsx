@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AudioPlayer } from '@/components/vilm/AudioPlayer';
 import { ShareMenu } from '@/components/vilm/ShareMenu';
+import { TranscriptionStatus } from '@/components/vilm/TranscriptionStatus';
 import { Vilm } from '@/types/vilm';
 import { useHaptics } from '@/hooks/useHaptics';
 import { sharingService } from '@/services/sharingService';
@@ -104,11 +105,18 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
           <Card className="p-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Transcript
-                </h3>
-                {vilm.transcript && vilm.transcript.trim() !== '' && (
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Transcript
+                  </h3>
+                  <TranscriptionStatus 
+                    transcript={vilm.transcript}
+                    isTranscribing={vilm.isTranscribing}
+                    transcriptionError={vilm.transcriptionError}
+                  />
+                </div>
+                {vilm.transcript && vilm.transcript.trim() !== '' && !vilm.isTranscribing && (
                   <div className="flex gap-2">
                     <Button 
                       variant="ghost" 
@@ -130,20 +138,51 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                 )}
               </div>
               
-              {vilm.transcript && vilm.transcript.trim() !== '' ? (
+              {vilm.isTranscribing ? (
+                <div className="p-6 bg-muted/20 rounded-lg">
+                  <div className="space-y-3">
+                    <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
+                    <div className="h-4 bg-muted animate-pulse rounded w-5/6"></div>
+                    <div className="h-4 bg-muted animate-pulse rounded w-4/6"></div>
+                    <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
+                    <div className="h-4 bg-muted animate-pulse rounded w-2/3"></div>
+                  </div>
+                </div>
+              ) : vilm.transcriptionError ? (
+                <div className="p-6 bg-destructive/10 rounded-lg border border-destructive/20 text-center">
+                  <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-6 h-6 text-destructive" />
+                  </div>
+                  <p className="text-destructive font-medium mb-1">
+                    Transcription Failed
+                  </p>
+                  <p className="text-destructive/70 text-sm mb-4">
+                    {vilm.transcriptionError}
+                  </p>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : vilm.transcript && vilm.transcript.trim() !== '' ? (
                 <div className="p-4 bg-muted/30 rounded-lg border-l-4 border-primary">
                   <p className="text-foreground whitespace-pre-wrap leading-relaxed">
                     {vilm.transcript}
                   </p>
                 </div>
               ) : (
-                <div className="p-4 bg-muted/20 rounded-lg text-center">
-                  <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground text-sm">
-                    Transcription in progress...
+                <div className="p-6 bg-muted/20 rounded-lg text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground font-medium mb-1">
+                    No Transcript Available
                   </p>
-                  <p className="text-muted-foreground text-xs mt-1">
-                    This may take a few moments
+                  <p className="text-muted-foreground/70 text-sm">
+                    The transcription service may not be available
                   </p>
                 </div>
               )}

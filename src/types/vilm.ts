@@ -7,6 +7,8 @@ export interface Vilm {
   updatedAt: Date;
   audioFilename?: string; // filename of the audio file
   audioPath?: string; // full path to the audio file
+  isTranscribing?: boolean; // indicates if transcription is in progress
+  transcriptionError?: string; // error message if transcription failed
 }
 
 export interface RecordingState {
