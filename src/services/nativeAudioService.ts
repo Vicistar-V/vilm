@@ -30,19 +30,7 @@ class NativeAudioService {
 
   async startRecording(): Promise<{ success: boolean; recordingId?: string; error?: string; details?: any }> {
     try {
-      console.log('[DEBUG] 1. Starting recording - requesting permissions');
-      const hasPermission = await this.requestPermissions();
-      console.log('[DEBUG] 2. Permission result:', hasPermission);
-      
-      if (!hasPermission) {
-        return { 
-          success: false, 
-          error: 'Audio permission denied by user',
-          details: { step: 'permission_request' }
-        };
-      }
-
-      console.log('[DEBUG] 3. Getting user media stream');
+      console.log('[DEBUG] 1. Initializing recording - getting user media stream');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -50,7 +38,7 @@ class NativeAudioService {
           sampleRate: 44100
         } 
       });
-      console.log('[DEBUG] 4. Stream obtained:', stream.id, 'Active:', stream.active);
+      console.log('[DEBUG] 2. Stream obtained:', stream.id, 'Active:', stream.active);
 
       // Use AAC codec for better mobile compatibility (closer to m4a)
       let mimeType = 'audio/webm;codecs=opus';
@@ -59,21 +47,21 @@ class NativeAudioService {
       } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
         mimeType = 'audio/webm;codecs=opus';
       }
-      console.log('[DEBUG] 5. Selected MIME type:', mimeType);
+      console.log('[DEBUG] 3. Selected MIME type:', mimeType);
 
-      console.log('[DEBUG] 6. Creating MediaRecorder');
+      console.log('[DEBUG] 4. Creating MediaRecorder');
       this.mediaRecorder = new MediaRecorder(stream, { mimeType });
       this.audioChunks = [];
       this.startTime = Date.now();
       this.currentRecordingId = uuidv4();
 
-      console.log('[DEBUG] 7. MediaRecorder created, state:', this.mediaRecorder.state);
+      console.log('[DEBUG] 5. MediaRecorder created, state:', this.mediaRecorder.state);
 
       // Ensure temp directory exists
-      console.log('[DEBUG] 8. Ensuring temp directory exists');
+      console.log('[DEBUG] 6. Ensuring temp directory exists');
       await this.ensureTempAudioDirectory();
 
-      console.log('[DEBUG] 9. Setting up event handlers');
+      console.log('[DEBUG] 7. Setting up event handlers');
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           console.log('[DEBUG] Data chunk received:', event.data.size, 'bytes');
@@ -85,9 +73,9 @@ class NativeAudioService {
         console.error('[DEBUG] MediaRecorder error:', event);
       };
 
-      console.log('[DEBUG] 10. Starting MediaRecorder');
+      console.log('[DEBUG] 8. Starting MediaRecorder');
       this.mediaRecorder.start(1000);
-      console.log('[DEBUG] 11. MediaRecorder started, state:', this.mediaRecorder.state);
+      console.log('[DEBUG] 9. MediaRecorder started, state:', this.mediaRecorder.state);
       
       return { 
         success: true, 
