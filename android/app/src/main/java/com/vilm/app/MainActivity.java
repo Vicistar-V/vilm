@@ -1,4 +1,4 @@
-package app.lovable.a50b1d70143b47269eadae7b248a8b9b;
+package com.vilm.app;
 
 import com.getcapacitor.BridgeActivity;
 
