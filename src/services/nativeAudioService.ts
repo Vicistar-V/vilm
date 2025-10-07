@@ -1,5 +1,6 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { v4 as uuidv4 } from 'uuid';
+import { debugLogger } from '@/components/debug/DebugOverlay';
 
 export interface AudioRecording {
   id: string;
@@ -30,7 +31,7 @@ class NativeAudioService {
 
   async startRecording(): Promise<{ success: boolean; recordingId?: string; error?: string; details?: any }> {
     try {
-      console.log('[DEBUG] 1. Initializing recording - getting user media stream');
+      debugLogger.info('Audio', 'Starting recording - requesting microphone');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -38,7 +39,7 @@ class NativeAudioService {
           sampleRate: 44100
         } 
       });
-      console.log('[DEBUG] 2. Stream obtained:', stream.id, 'Active:', stream.active);
+      debugLogger.success('Audio', `Microphone access granted - Stream: ${stream.id}`);
 
       // Use AAC codec for better mobile compatibility (closer to m4a)
       let mimeType = 'audio/webm;codecs=opus';
@@ -47,35 +48,29 @@ class NativeAudioService {
       } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
         mimeType = 'audio/webm;codecs=opus';
       }
-      console.log('[DEBUG] 3. Selected MIME type:', mimeType);
+      debugLogger.info('Audio', `Using codec: ${mimeType}`);
 
-      console.log('[DEBUG] 4. Creating MediaRecorder');
       this.mediaRecorder = new MediaRecorder(stream, { mimeType });
       this.audioChunks = [];
       this.startTime = Date.now();
       this.currentRecordingId = uuidv4();
 
-      console.log('[DEBUG] 5. MediaRecorder created, state:', this.mediaRecorder.state);
-
-      // Ensure temp directory exists
-      console.log('[DEBUG] 6. Ensuring temp directory exists');
+      debugLogger.info('Audio', 'Creating temp directory for recording');
       await this.ensureTempAudioDirectory();
 
-      console.log('[DEBUG] 7. Setting up event handlers');
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log('[DEBUG] Data chunk received:', event.data.size, 'bytes');
           this.audioChunks.push(event.data);
+          debugLogger.info('Audio', `Recording chunk: ${event.data.size} bytes`);
         }
       };
 
       this.mediaRecorder.onerror = (event) => {
-        console.error('[DEBUG] MediaRecorder error:', event);
+        debugLogger.error('Audio', `MediaRecorder error: ${event}`);
       };
 
-      console.log('[DEBUG] 8. Starting MediaRecorder');
       this.mediaRecorder.start(1000);
-      console.log('[DEBUG] 9. MediaRecorder started, state:', this.mediaRecorder.state);
+      debugLogger.success('Audio', `Recording started - ID: ${this.currentRecordingId}`);
       
       return { 
         success: true, 
@@ -88,14 +83,13 @@ class NativeAudioService {
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error('[DEBUG] Failed to start recording:', error);
+      debugLogger.error('Audio', `Failed to start recording: ${errorMsg}`);
       this.currentRecordingId = null;
       return { 
         success: false, 
         error: errorMsg,
         details: {
-          stack: errorStack,
+          stack: error instanceof Error ? error.stack : undefined,
           name: error instanceof Error ? error.name : 'Unknown'
         }
       };
@@ -114,15 +108,15 @@ class NativeAudioService {
 
       this.mediaRecorder.onstop = async () => {
         try {
-          // Create audio blob
           const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
           const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+          debugLogger.info('Audio', `Recording stopped - Size: ${audioBlob.size} bytes, Duration: ${duration}s`);
           
-          // Save to temporary location
           const tempFilename = this.generateTempAudioFilename(recordingId);
+          debugLogger.info('Audio', `Saving temp file: ${tempFilename}`);
           const tempPath = await this.saveTemporaryAudioFile(audioBlob, tempFilename);
+          debugLogger.success('Audio', `Temp file saved successfully`);
           
-          // Stop all tracks
           if (this.mediaRecorder?.stream) {
             this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
           }
@@ -141,7 +135,7 @@ class NativeAudioService {
 
           resolve(recording);
         } catch (error) {
-          console.error('Failed to save temporary recording:', error);
+          debugLogger.error('Audio', `Failed to save temp recording: ${error.message}`);
           resolve(null);
         }
       };
@@ -152,37 +146,36 @@ class NativeAudioService {
 
   async saveRecordingPermanently(tempRecording: AudioRecording): Promise<string> {
     try {
-      // Generate permanent filename with .m4a extension
       const permanentFilename = `${tempRecording.id}.m4a`;
+      debugLogger.info('Storage', `Saving recording permanently: ${permanentFilename}`);
       
-      // Ensure permanent directory exists
       await this.ensureAudioDirectory();
       
-      // Get the actual temp filename (find by pattern)
       const tempFilename = await this.findTempFile(tempRecording.id);
       if (!tempFilename) {
+        debugLogger.error('Storage', `Temp file not found: ${tempRecording.id}`);
         throw new Error(`Temporary file not found for recording ${tempRecording.id}`);
       }
 
-      // Read temporary file as base64 for binary audio data
+      debugLogger.info('Storage', `Reading temp file: ${tempFilename}`);
       const tempFileResult = await Filesystem.readFile({
         path: `${this.tempAudioDirectory}/${tempFilename}`,
         directory: Directory.Data
       });
 
-      // Write to permanent location
+      debugLogger.info('Storage', `Writing to permanent storage`);
       await Filesystem.writeFile({
         path: `${this.audioDirectory}/${permanentFilename}`,
         data: tempFileResult.data,
         directory: Directory.Data
       });
 
-      // Clean up temporary file
       await this.deleteTemporaryRecording(tempRecording.id);
+      debugLogger.success('Storage', `Recording saved: ${permanentFilename}`);
 
       return permanentFilename;
     } catch (error) {
-      console.error('Failed to save recording permanently:', error);
+      debugLogger.error('Storage', `Save failed: ${error.message}`);
       throw error;
     }
   }
@@ -213,12 +206,12 @@ class NativeAudioService {
 
   async getAudioFile(filename: string): Promise<string> {
     try {
+      debugLogger.info('Storage', `Reading audio file: ${filename}`);
       const result = await Filesystem.readFile({
         path: `${this.audioDirectory}/${filename}`,
         directory: Directory.Data
       });
 
-      // Determine MIME type based on extension
       let mimeType = 'audio/m4a';
       if (filename.endsWith('.webm')) {
         mimeType = 'audio/webm';
@@ -226,35 +219,37 @@ class NativeAudioService {
         mimeType = 'audio/mp4';
       }
 
+      debugLogger.success('Storage', `Audio file loaded: ${filename}`);
       return `data:${mimeType};base64,${result.data}`;
     } catch (error) {
-      console.error('Failed to read audio file:', error);
+      debugLogger.error('Storage', `Failed to read audio: ${error.message}`);
       throw new Error(`Failed to read audio file: ${error.message || 'Unknown error'}`);
     }
   }
 
   async getAudioFileUri(filename: string): Promise<string> {
     try {
+      debugLogger.info('Storage', `Getting URI for: ${filename}`);
       const result = await Filesystem.getUri({
         path: `${this.audioDirectory}/${filename}`,
         directory: Directory.Data
       });
-      console.log('Got audio file URI:', result.uri);
+      debugLogger.success('Storage', `Got URI: ${result.uri}`);
       return result.uri;
     } catch (error) {
-      console.error('Failed to get audio file URI:', error);
+      debugLogger.error('Storage', `Failed to get URI: ${error.message}`);
       throw new Error(`Failed to get audio file URI: ${error.message || 'Unknown error'}`);
     }
   }
 
   async getAudioFileData(filename: string): Promise<{ data: string; mimeType: string }> {
     try {
+      debugLogger.info('Storage', `Getting file data: ${filename}`);
       const result = await Filesystem.readFile({
         path: `${this.audioDirectory}/${filename}`,
         directory: Directory.Data
       });
 
-      // Determine MIME type based on extension
       let mimeType = 'audio/m4a';
       if (filename.endsWith('.webm')) {
         mimeType = 'audio/webm';
@@ -262,9 +257,10 @@ class NativeAudioService {
         mimeType = 'audio/mp4';
       }
 
+      debugLogger.success('Storage', `File data retrieved: ${mimeType}`);
       return { data: result.data as string, mimeType };
     } catch (error) {
-      console.error('Failed to get audio file data:', error);
+      debugLogger.error('Storage', `Failed to get file data: ${error.message}`);
       throw new Error(`Failed to get audio file data: ${error.message || 'Unknown error'}`);
     }
   }

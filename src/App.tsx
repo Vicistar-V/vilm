@@ -4,6 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { DebugOverlay } from "@/components/debug/DebugOverlay";
+import { DebugToggle } from "@/components/debug/DebugToggle";
 import { MainFeed } from './pages/MainFeed';
 import { DetailView } from './pages/DetailView';
 import { Settings } from './pages/Settings';
@@ -18,6 +20,7 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
   const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
+  const [isDebugOpen, setIsDebugOpen] = useState(false);
   
   useStatusBar();
   const { notification } = useHaptics();
@@ -83,6 +86,15 @@ const AppContent = () => {
       {currentView === 'settings' && (
         <Settings onBack={handleBack} />
       )}
+
+      <DebugToggle 
+        isDebugOpen={isDebugOpen} 
+        onToggle={() => setIsDebugOpen(!isDebugOpen)} 
+      />
+      <DebugOverlay 
+        isOpen={isDebugOpen} 
+        onClose={() => setIsDebugOpen(false)} 
+      />
     </div>
   );
 };

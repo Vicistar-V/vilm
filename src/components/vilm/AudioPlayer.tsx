@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, AlertCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { nativeAudioService } from '@/services/nativeAudioService';
+import { debugLogger } from '@/components/debug/DebugOverlay';
 
 interface AudioPlayerProps {
   audioFilename?: string;
@@ -48,19 +49,18 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         setIsLoading(true);
         setError(null);
         
-        console.log('[AudioPlayer] Loading audio file:', audioFilename);
+        debugLogger.info('Player', `Loading: ${audioFilename}`);
         
         const url = await nativeAudioService.getAudioFile(audioFilename);
         
-        console.log('[AudioPlayer] Audio file loaded, creating Audio element');
+        debugLogger.success('Player', 'Audio loaded, creating player');
         setAudioUrl(url);
         
-        // Create audio element
         const audio = new Audio(url);
         audioRef.current = audio;
         
         audio.addEventListener('loadedmetadata', () => {
-          console.log('[AudioPlayer] Audio metadata loaded');
+          debugLogger.success('Player', 'Audio ready to play');
           setIsLoading(false);
         });
         
@@ -71,31 +71,21 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         });
         
         audio.addEventListener('ended', () => {
-          console.log('[AudioPlayer] Audio playback ended');
+          debugLogger.info('Player', 'Playback ended');
           setIsPlaying(false);
           setCurrentTime(0);
         });
         
         audio.addEventListener('error', (e) => {
-          console.error('[AudioPlayer] Audio element error:', e);
-          console.error('[AudioPlayer] Audio error details:', {
-            error: audio.error,
-            src: audio.src,
-            networkState: audio.networkState,
-            readyState: audio.readyState
-          });
+          debugLogger.error('Player', `Audio error: ${audio.error?.message || 'Unknown'}`);
           setError('Failed to load audio');
           setIsLoading(false);
         });
         
       } catch (err) {
-        console.error('[AudioPlayer] Failed to load audio:', err);
-        console.error('[AudioPlayer] Error details:', {
-          message: err.message,
-          stack: err.stack,
-          audioFilename
-        });
-        setError(`Failed to load audio: ${err.message || 'Unknown error'}`);
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        debugLogger.error('Player', `Load failed: ${errorMsg}`);
+        setError(`Failed to load audio: ${errorMsg}`);
         setIsLoading(false);
       }
     };

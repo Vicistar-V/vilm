@@ -2,6 +2,7 @@ import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { nativeAudioService } from './nativeAudioService';
 import { Vilm } from '@/types/vilm';
+import { debugLogger } from '@/components/debug/DebugOverlay';
 
 export interface ShareOptions {
   includeAudio?: boolean;
@@ -52,7 +53,7 @@ class SharingService {
       // If audio is requested and available
       if (includeAudio && vilm.audioFilename) {
         try {
-          console.log('[ShareService] Starting audio share preparation');
+          debugLogger.info('Share', 'Preparing audio for sharing');
           
           // Ensure temp_share directory exists
           try {
@@ -61,14 +62,14 @@ class SharingService {
               directory: Directory.Cache,
               recursive: true
             });
+            debugLogger.info('Share', 'Temp directory created');
           } catch (mkdirError) {
-            console.log('[ShareService] temp_share directory exists or created');
+            debugLogger.info('Share', 'Temp directory already exists');
           }
 
-          // Get audio file data directly
+          debugLogger.info('Share', `Getting audio data: ${vilm.audioFilename}`);
           const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
           
-          // Determine proper file extension from MIME type
           let extension = 'm4a';
           if (mimeType.includes('webm')) {
             extension = 'webm';
@@ -77,70 +78,50 @@ class SharingService {
           }
           
           const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;
-          console.log('[ShareService] Creating temp file:', tempFileName);
+          debugLogger.info('Share', `Creating temp share file: ${tempFileName}`);
           
-          // Write temporary file for sharing
           await Filesystem.writeFile({
             path: `temp_share/${tempFileName}`,
             data: base64Data,
             directory: Directory.Cache
           });
 
-          console.log('[ShareService] Temp file created, getting URI');
-
-          // Get the file URI for sharing
+          debugLogger.info('Share', 'Getting file URI for sharing');
           const fileUri = await Filesystem.getUri({
             directory: Directory.Cache,
             path: `temp_share/${tempFileName}`
           });
 
-          console.log('[ShareService] Got file URI:', fileUri.uri);
+          debugLogger.success('Share', `File ready: ${fileUri.uri}`);
 
-          // Use proper file URI for Capacitor Share
           shareData.files = [fileUri.uri];
-          shareData.url = fileUri.uri; // Some platforms need this
+          shareData.url = fileUri.uri;
           
         } catch (audioError) {
-          console.error('[ShareService] Failed to include audio in share:', audioError);
-          console.error('[ShareService] Error details:', {
-            message: audioError.message,
-            stack: audioError.stack,
-            vilmId: vilm.id,
-            audioFilename: vilm.audioFilename
-          });
-          // Continue without audio - share text only
+          debugLogger.error('Share', `Audio prep failed: ${audioError.message}`);
+          debugLogger.error('Share', `Vilm: ${vilm.id}, File: ${vilm.audioFilename}`);
         }
       }
 
-      console.log('[ShareService] Calling Share.share with data:', {
-        hasTitle: !!shareData.title,
-        hasText: !!shareData.text,
-        hasFiles: !!shareData.files,
-        hasUrl: !!shareData.url
-      });
+      debugLogger.info('Share', `Calling native share - Has Files: ${!!shareData.files}`);
 
-      // Share using Capacitor Share plugin
       const shareResult = await Share.share(shareData);
       
-      console.log('[ShareService] Share result:', shareResult);
+      debugLogger.success('Share', 'Share completed successfully');
 
-      // Clean up temporary files after a delay
       if (shareData.files) {
         setTimeout(() => this.cleanupTempShareFiles(), 5000);
       }
 
     } catch (error) {
-      console.error('[ShareService] Sharing failed:', error);
-      console.error('[ShareService] Error details:', {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
+      debugLogger.error('Share', `Share failed: ${error.message}`);
       
-      // Provide more specific error messages
       if (error.message?.includes('NotAllowedError')) {
-        throw new Error('Sharing is not allowed. Please check app permissions.');
+        const msg = 'Sharing not allowed. Check app permissions.';
+        debugLogger.error('Share', msg);
+        throw new Error(msg);
       } else if (error.message?.includes('AbortError')) {
+        debugLogger.warning('Share', 'User cancelled share');
         throw new Error('Sharing was cancelled.');
       } else {
         throw new Error(`Failed to share Vilm: ${error.message || 'Unknown error'}`);
