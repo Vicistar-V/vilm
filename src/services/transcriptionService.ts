@@ -1,4 +1,5 @@
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
+import { Device } from '@capacitor/device';
 import { nativeAudioService } from './nativeAudioService';
 
 export interface TranscriptionResult {
@@ -10,25 +11,40 @@ export interface TranscriptionResult {
 
 class TranscriptionService {
   private isInitialized = false;
+  private isCheckingPermissions = false;
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
+    this.isCheckingPermissions = true;
+
     try {
-      // Request permissions for speech recognition
+      // Check if we're on web platform
+      const deviceInfo = await Device.getInfo();
+      if (deviceInfo.platform === 'web') {
+        console.log('Speech recognition not available on web platform');
+        this.isCheckingPermissions = false;
+        throw new Error('Speech recognition not available on web');
+      }
+
+      // Request permissions for speech recognition (native only)
       const { available } = await SpeechRecognition.available();
       if (!available) {
+        this.isCheckingPermissions = false;
         throw new Error('Speech recognition not available on this device');
       }
 
       const permissionResult = await SpeechRecognition.requestPermissions();
       if (permissionResult.speechRecognition !== 'granted') {
+        this.isCheckingPermissions = false;
         throw new Error('Speech recognition permission denied');
       }
 
       this.isInitialized = true;
+      this.isCheckingPermissions = false;
     } catch (error) {
-      console.error('Failed to initialize transcription service:', error);
+      console.log('Transcription service initialization:', error);
+      this.isCheckingPermissions = false;
       throw error;
     }
   }
@@ -191,11 +207,21 @@ class TranscriptionService {
 
   async isAvailable(): Promise<boolean> {
     try {
+      // Check platform first
+      const deviceInfo = await Device.getInfo();
+      if (deviceInfo.platform === 'web') {
+        return false;
+      }
+
       const { available } = await SpeechRecognition.available();
       return available;
     } catch {
       return false;
     }
+  }
+
+  getIsCheckingPermissions(): boolean {
+    return this.isCheckingPermissions;
   }
 }
 
