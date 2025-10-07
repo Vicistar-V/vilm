@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { RecordingState } from '@/types/vilm';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
 
+export interface DebugLogEntry {
+  timestamp: string;
+  message: string;
+  level: 'info' | 'success' | 'error' | 'warning';
+}
+
 export const useAudioRecording = () => {
   const [recordingState, setRecordingState] = useState<RecordingState>({
     isRecording: false,
@@ -12,8 +18,19 @@ export const useAudioRecording = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
   const [isCheckingPermission, setIsCheckingPermission] = useState(false);
+  const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
   
   const durationTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const addDebugLog = (message: string, level: DebugLogEntry['level'] = 'info') => {
+    const timestamp = new Date().toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit'
+    });
+    setDebugLog(prev => [...prev, { timestamp, message, level }]);
+  };
 
   const checkPermission = async (): Promise<boolean> => {
     setIsCheckingPermission(true);
@@ -25,12 +42,15 @@ export const useAudioRecording = () => {
 
   const startRecording = useCallback(async (): Promise<boolean> => {
     try {
+      addDebugLog('🎙️ Starting recording process...', 'info');
+      
       // Clear any previous recording
       setCurrentRecording(null);
       setCurrentRecordingId(null);
+      setDebugLog([]); // Clear previous debug logs
       
-      // Skip preflight permission checks. Let native layer prompt on start.
-
+      addDebugLog('Clearing previous recording state', 'info');
+      addDebugLog('Setting processing state to true', 'info');
 
       setRecordingState({
         isRecording: false,
@@ -38,9 +58,17 @@ export const useAudioRecording = () => {
         isProcessing: true
       });
 
+      addDebugLog('Calling nativeAudioService.startRecording()', 'info');
       const result = await nativeAudioService.startRecording();
       
+      addDebugLog(`Service returned: ${JSON.stringify(result)}`, result.success ? 'success' : 'error');
+      
+      if (result.error) {
+        addDebugLog(`❌ Error: ${result.error}`, 'error');
+      }
+      
       if (result.success && result.recordingId) {
+        addDebugLog(`✅ Recording started with ID: ${result.recordingId}`, 'success');
         setCurrentRecordingId(result.recordingId);
         setHasPermission(true);
         setRecordingState({
@@ -49,6 +77,7 @@ export const useAudioRecording = () => {
           isProcessing: false
         });
 
+        addDebugLog('Starting duration timer', 'success');
         // Start duration timer
         durationTimer.current = setInterval(() => {
           setRecordingState(prev => ({
@@ -57,8 +86,10 @@ export const useAudioRecording = () => {
           }));
         }, 1000);
 
+        addDebugLog('✅ Recording fully initialized', 'success');
         return true;
       } else {
+        addDebugLog('❌ Failed to start recording - no recordingId', 'error');
         setRecordingState({
           isRecording: false,
           duration: 0,
@@ -67,6 +98,8 @@ export const useAudioRecording = () => {
         return false;
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      addDebugLog(`❌ Exception in startRecording: ${errorMsg}`, 'error');
       console.error('Failed to start recording:', error);
       setRecordingState({
         isRecording: false,
@@ -161,6 +194,7 @@ export const useAudioRecording = () => {
     startRecording,
     stopRecording,
     cancelRecording,
-    checkPermission
+    checkPermission,
+    debugLog
   };
 };

@@ -73,7 +73,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     stopRecording, 
     cancelRecording,
     hasPermission,
-    isCheckingPermission
+    isCheckingPermission,
+    debugLog
   } = useAudioRecording();
 
   // Auto-save grace rule: save recording if app goes to background during finalize stage
@@ -272,6 +273,52 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 <p className="text-vilm-text-secondary mt-4 text-sm">
                   {recordingState.isProcessing ? 'Processing...' : 'Tap to stop recording'}
                 </p>
+
+                {/* Debug Panel */}
+                <div className="mt-8 p-4 bg-red-500/10 border border-red-500/30 rounded-lg max-h-64 overflow-y-auto text-left">
+                  <div className="text-xs font-bold text-red-600 mb-3 flex items-center justify-between">
+                    <span>🔍 DEBUG INFO (Temporary)</span>
+                    <span className="font-normal text-red-500">Live Diagnostics</span>
+                  </div>
+                  
+                  {/* Current State */}
+                  <div className="mb-3 p-2 bg-black/20 rounded text-xs font-mono space-y-1">
+                    <div className="text-white">
+                      <span className="text-yellow-400">isRecording:</span> {recordingState.isRecording ? '✅ TRUE' : '❌ FALSE'}
+                    </div>
+                    <div className="text-white">
+                      <span className="text-yellow-400">isProcessing:</span> {recordingState.isProcessing ? '⏳ TRUE' : '✅ FALSE'}
+                    </div>
+                    <div className="text-white">
+                      <span className="text-yellow-400">duration:</span> {recordingState.duration}s
+                    </div>
+                    <div className="text-white">
+                      <span className="text-yellow-400">hasPermission:</span> {hasPermission === null ? '❓ NULL' : hasPermission ? '✅ TRUE' : '❌ FALSE'}
+                    </div>
+                  </div>
+
+                  {/* Debug Log */}
+                  <div className="space-y-1">
+                    {debugLog.length === 0 ? (
+                      <div className="text-xs text-red-400">No debug logs yet...</div>
+                    ) : (
+                      debugLog.map((log, idx) => (
+                        <div 
+                          key={idx} 
+                          className={cn(
+                            "text-xs font-mono p-1 rounded",
+                            log.level === 'error' && "bg-red-900/30 text-red-300",
+                            log.level === 'success' && "bg-green-900/30 text-green-300",
+                            log.level === 'warning' && "bg-yellow-900/30 text-yellow-300",
+                            log.level === 'info' && "bg-blue-900/30 text-blue-300"
+                          )}
+                        >
+                          <span className="text-gray-400">[{log.timestamp}]</span> {log.message}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             ) : (
               // Finalize Stage
