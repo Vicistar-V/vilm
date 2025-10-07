@@ -52,12 +52,32 @@ class SharingService {
       // If audio is requested and available
       if (includeAudio && vilm.audioFilename) {
         try {
-          // Create a temporary share file
-          const tempFileName = `vilm_${vilm.id}_${Date.now()}.m4a`;
-          const audioDataUrl = await nativeAudioService.getAudioFile(vilm.audioFilename);
+          console.log('[ShareService] Starting audio share preparation');
           
-          // Convert data URL to base64
-          const base64Data = audioDataUrl.split(',')[1];
+          // Ensure temp_share directory exists
+          try {
+            await Filesystem.mkdir({
+              path: 'temp_share',
+              directory: Directory.Cache,
+              recursive: true
+            });
+          } catch (mkdirError) {
+            console.log('[ShareService] temp_share directory exists or created');
+          }
+
+          // Get audio file data directly
+          const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
+          
+          // Determine proper file extension from MIME type
+          let extension = 'm4a';
+          if (mimeType.includes('webm')) {
+            extension = 'webm';
+          } else if (mimeType.includes('mp4')) {
+            extension = 'mp4';
+          }
+          
+          const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;
+          console.log('[ShareService] Creating temp file:', tempFileName);
           
           // Write temporary file for sharing
           await Filesystem.writeFile({
@@ -66,21 +86,43 @@ class SharingService {
             directory: Directory.Cache
           });
 
+          console.log('[ShareService] Temp file created, getting URI');
+
           // Get the file URI for sharing
           const fileUri = await Filesystem.getUri({
             directory: Directory.Cache,
             path: `temp_share/${tempFileName}`
           });
 
+          console.log('[ShareService] Got file URI:', fileUri.uri);
+
+          // Use proper file URI for Capacitor Share
           shareData.files = [fileUri.uri];
+          shareData.url = fileUri.uri; // Some platforms need this
+          
         } catch (audioError) {
-          console.error('Failed to include audio in share:', audioError);
-          // Continue without audio
+          console.error('[ShareService] Failed to include audio in share:', audioError);
+          console.error('[ShareService] Error details:', {
+            message: audioError.message,
+            stack: audioError.stack,
+            vilmId: vilm.id,
+            audioFilename: vilm.audioFilename
+          });
+          // Continue without audio - share text only
         }
       }
 
+      console.log('[ShareService] Calling Share.share with data:', {
+        hasTitle: !!shareData.title,
+        hasText: !!shareData.text,
+        hasFiles: !!shareData.files,
+        hasUrl: !!shareData.url
+      });
+
       // Share using Capacitor Share plugin
-      await Share.share(shareData);
+      const shareResult = await Share.share(shareData);
+      
+      console.log('[ShareService] Share result:', shareResult);
 
       // Clean up temporary files after a delay
       if (shareData.files) {
@@ -88,8 +130,21 @@ class SharingService {
       }
 
     } catch (error) {
-      console.error('Sharing failed:', error);
-      throw new Error('Failed to share Vilm');
+      console.error('[ShareService] Sharing failed:', error);
+      console.error('[ShareService] Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+      
+      // Provide more specific error messages
+      if (error.message?.includes('NotAllowedError')) {
+        throw new Error('Sharing is not allowed. Please check app permissions.');
+      } else if (error.message?.includes('AbortError')) {
+        throw new Error('Sharing was cancelled.');
+      } else {
+        throw new Error(`Failed to share Vilm: ${error.message || 'Unknown error'}`);
+      }
     }
   }
 
@@ -105,6 +160,8 @@ class SharingService {
     if (!vilm.audioFilename) {
       throw new Error('No audio file available to share');
     }
+
+    console.log('[ShareService] shareAudio called for vilm:', vilm.id);
 
     await this.shareVilm(vilm, {
       includeAudio: true,

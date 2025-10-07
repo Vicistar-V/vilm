@@ -48,7 +48,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         setIsLoading(true);
         setError(null);
         
+        console.log('[AudioPlayer] Loading audio file:', audioFilename);
+        
         const url = await nativeAudioService.getAudioFile(audioFilename);
+        
+        console.log('[AudioPlayer] Audio file loaded, creating Audio element');
         setAudioUrl(url);
         
         // Create audio element
@@ -56,6 +60,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         audioRef.current = audio;
         
         audio.addEventListener('loadedmetadata', () => {
+          console.log('[AudioPlayer] Audio metadata loaded');
           setIsLoading(false);
         });
         
@@ -66,18 +71,31 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         });
         
         audio.addEventListener('ended', () => {
+          console.log('[AudioPlayer] Audio playback ended');
           setIsPlaying(false);
           setCurrentTime(0);
         });
         
-        audio.addEventListener('error', () => {
+        audio.addEventListener('error', (e) => {
+          console.error('[AudioPlayer] Audio element error:', e);
+          console.error('[AudioPlayer] Audio error details:', {
+            error: audio.error,
+            src: audio.src,
+            networkState: audio.networkState,
+            readyState: audio.readyState
+          });
           setError('Failed to load audio');
           setIsLoading(false);
         });
         
       } catch (err) {
-        console.error('Failed to load audio:', err);
-        setError('Failed to load audio file');
+        console.error('[AudioPlayer] Failed to load audio:', err);
+        console.error('[AudioPlayer] Error details:', {
+          message: err.message,
+          stack: err.stack,
+          audioFilename
+        });
+        setError(`Failed to load audio: ${err.message || 'Unknown error'}`);
         setIsLoading(false);
       }
     };

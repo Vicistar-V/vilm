@@ -28,11 +28,15 @@ export const useVilmStorage = () => {
     try {
       setError(null);
       
+      console.log('[useVilmStorage] Creating vilm with temp recording:', tempRecording.id);
+      
       // Generate a unique ID for the vilm
       const id = uuidv4();
       
       // Move audio file from temporary to permanent location
+      console.log('[useVilmStorage] Saving recording permanently');
       const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
+      console.log('[useVilmStorage] Audio saved as:', audioFilename);
       
       // Create the vilm object with transcription state
       const vilm = {
@@ -46,14 +50,17 @@ export const useVilmStorage = () => {
       };
       
       // Save to Dexie storage
+      console.log('[useVilmStorage] Saving vilm to storage');
       await dexieVilmStorage.saveVilm(vilm);
       
       // Reload the list to show the new vilm with loading state
       await loadVilms();
       
       // Start transcription process in background (don't wait for it)
+      console.log('[useVilmStorage] Starting transcription process');
       startTranscriptionProcess(id, audioFilename);
     } catch (err) {
+      console.error('[useVilmStorage] Failed to create vilm:', err);
       setError(err instanceof Error ? err.message : 'Failed to create vilm');
       throw err;
     }
@@ -128,7 +135,7 @@ export const useVilmStorage = () => {
 
   const startTranscriptionProcess = async (vilmId: string, audioFilename: string) => {
     try {
-      console.log('Starting browser-based transcription for:', audioFilename);
+      console.log('[useVilmStorage] Starting browser-based transcription for:', audioFilename);
       
       // Mark as transcribing
       await dexieVilmStorage.updateVilm(vilmId, { 
@@ -142,11 +149,21 @@ export const useVilmStorage = () => {
           : v
       ));
 
+      console.log('[useVilmStorage] Getting audio file for transcription');
+      
       // Get audio file as data URL
       const audioDataUrl = await nativeAudioService.getAudioFile(audioFilename);
       
+      console.log('[useVilmStorage] Audio file loaded, starting transcription');
+      
       // Transcribe using browser-based Whisper
       const result = await browserTranscriptionService.transcribeAudio(audioDataUrl);
+      
+      console.log('[useVilmStorage] Transcription result:', { 
+        isSuccess: result.isSuccess, 
+        hasTranscript: !!result.transcript,
+        error: result.error 
+      });
       
       if (result.isSuccess && result.transcript) {
         // Update with transcript
@@ -161,31 +178,42 @@ export const useVilmStorage = () => {
             : v
         ));
         
-        console.log('Transcription successful');
+        console.log('[useVilmStorage] Transcription successful');
       } else {
         // Handle transcription failure
+        const errorMsg = result.error || 'Transcription failed';
+        console.error('[useVilmStorage] Transcription failed:', errorMsg);
+        
         await dexieVilmStorage.updateVilm(vilmId, {
           isTranscribing: false,
-          transcriptionError: result.error || 'Transcription failed'
+          transcriptionError: errorMsg
         });
         
         setVilms(prev => prev.map(v => 
           v.id === vilmId 
-            ? { ...v, isTranscribing: false, transcriptionError: result.error }
+            ? { ...v, isTranscribing: false, transcriptionError: errorMsg }
             : v
         ));
       }
     } catch (error) {
-      console.error('Error during transcription:', error);
+      console.error('[useVilmStorage] Error during transcription:', error);
+      console.error('[useVilmStorage] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        vilmId,
+        audioFilename
+      });
+      
+      const errorMsg = `Transcription failed: ${error.message || 'Unknown error'}`;
       
       await dexieVilmStorage.updateVilm(vilmId, {
         isTranscribing: false,
-        transcriptionError: 'Transcription failed'
+        transcriptionError: errorMsg
       });
       
       setVilms(prev => prev.map(v => 
         v.id === vilmId 
-          ? { ...v, isTranscribing: false, transcriptionError: 'Transcription failed' }
+          ? { ...v, isTranscribing: false, transcriptionError: errorMsg }
           : v
       ));
     }

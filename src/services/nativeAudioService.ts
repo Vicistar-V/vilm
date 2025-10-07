@@ -229,7 +229,43 @@ class NativeAudioService {
       return `data:${mimeType};base64,${result.data}`;
     } catch (error) {
       console.error('Failed to read audio file:', error);
-      throw error;
+      throw new Error(`Failed to read audio file: ${error.message || 'Unknown error'}`);
+    }
+  }
+
+  async getAudioFileUri(filename: string): Promise<string> {
+    try {
+      const result = await Filesystem.getUri({
+        path: `${this.audioDirectory}/${filename}`,
+        directory: Directory.Data
+      });
+      console.log('Got audio file URI:', result.uri);
+      return result.uri;
+    } catch (error) {
+      console.error('Failed to get audio file URI:', error);
+      throw new Error(`Failed to get audio file URI: ${error.message || 'Unknown error'}`);
+    }
+  }
+
+  async getAudioFileData(filename: string): Promise<{ data: string; mimeType: string }> {
+    try {
+      const result = await Filesystem.readFile({
+        path: `${this.audioDirectory}/${filename}`,
+        directory: Directory.Data
+      });
+
+      // Determine MIME type based on extension
+      let mimeType = 'audio/m4a';
+      if (filename.endsWith('.webm')) {
+        mimeType = 'audio/webm';
+      } else if (filename.endsWith('.mp4')) {
+        mimeType = 'audio/mp4';
+      }
+
+      return { data: result.data as string, mimeType };
+    } catch (error) {
+      console.error('Failed to get audio file data:', error);
+      throw new Error(`Failed to get audio file data: ${error.message || 'Unknown error'}`);
     }
   }
 
