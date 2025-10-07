@@ -29,13 +29,8 @@ export const useAudioRecording = () => {
       setCurrentRecording(null);
       setCurrentRecordingId(null);
       
-      // Check permissions first
-      if (!hasPermission) {
-        const permissionGranted = await checkPermission();
-        if (!permissionGranted) {
-          return false;
-        }
-      }
+      // Skip preflight permission checks. Let native layer prompt on start.
+
 
       setRecordingState({
         isRecording: false,
@@ -47,6 +42,7 @@ export const useAudioRecording = () => {
       
       if (result.success && result.recordingId) {
         setCurrentRecordingId(result.recordingId);
+        setHasPermission(true);
         setRecordingState({
           isRecording: true,
           duration: 0,
@@ -79,7 +75,7 @@ export const useAudioRecording = () => {
       });
       return false;
     }
-  }, [hasPermission]);
+  }, []);
 
   const stopRecording = useCallback(async (): Promise<AudioRecording | null> => {
     try {
@@ -145,8 +141,7 @@ export const useAudioRecording = () => {
   }, [recordingState.isRecording, currentRecordingId]);
 
   useEffect(() => {
-    checkPermission();
-    
+    // Avoid requesting permissions on mount to prevent NotAllowedError on webviews
     // Cleanup abandoned temp files on init
     nativeAudioService.cleanupAbandonedTempFiles().catch(console.error);
     
