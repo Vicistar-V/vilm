@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Vilm } from '@/types/vilm';
 import { dexieVilmStorage } from '@/services/dexieStorage';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
-import { transcriptionService } from '@/services/transcriptionService';
+import { browserTranscriptionService } from '@/services/browserTranscriptionService';
 import { permissionsService } from '@/services/permissionsService';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -128,38 +128,66 @@ export const useVilmStorage = () => {
 
   const startTranscriptionProcess = async (vilmId: string, audioFilename: string) => {
     try {
-      const result = await transcriptionService.transcribeAudio(audioFilename);
+      console.log('Starting browser-based transcription for:', audioFilename);
       
-      if (result.isSuccess && result.transcript.trim()) {
-        // Update the vilm with successful transcription
+      // Mark as transcribing
+      await dexieVilmStorage.updateVilm(vilmId, { 
+        isTranscribing: true,
+        transcriptionError: undefined 
+      });
+      
+      setVilms(prev => prev.map(v => 
+        v.id === vilmId 
+          ? { ...v, isTranscribing: true, transcriptionError: undefined }
+          : v
+      ));
+
+      // Get audio file as data URL
+      const audioDataUrl = await nativeAudioService.getAudioFile(audioFilename);
+      
+      // Transcribe using browser-based Whisper
+      const result = await browserTranscriptionService.transcribeAudio(audioDataUrl);
+      
+      if (result.isSuccess && result.transcript) {
+        // Update with transcript
         await dexieVilmStorage.updateVilm(vilmId, {
           transcript: result.transcript,
-          isTranscribing: false,
-          transcriptionError: undefined
+          isTranscribing: false
         });
+        
+        setVilms(prev => prev.map(v => 
+          v.id === vilmId 
+            ? { ...v, transcript: result.transcript, isTranscribing: false }
+            : v
+        ));
+        
+        console.log('Transcription successful');
       } else {
-        // Update with transcription error
+        // Handle transcription failure
         await dexieVilmStorage.updateVilm(vilmId, {
           isTranscribing: false,
           transcriptionError: result.error || 'Transcription failed'
         });
+        
+        setVilms(prev => prev.map(v => 
+          v.id === vilmId 
+            ? { ...v, isTranscribing: false, transcriptionError: result.error }
+            : v
+        ));
       }
-      
-      // Reload vilms to show updated state
-      await loadVilms();
     } catch (error) {
-      console.error('Background transcription failed:', error);
+      console.error('Error during transcription:', error);
       
-      // Update with transcription error
-      try {
-        await dexieVilmStorage.updateVilm(vilmId, {
-          isTranscribing: false,
-          transcriptionError: 'Transcription service unavailable'
-        });
-        await loadVilms();
-      } catch (updateError) {
-        console.error('Failed to update vilm with error state:', updateError);
-      }
+      await dexieVilmStorage.updateVilm(vilmId, {
+        isTranscribing: false,
+        transcriptionError: 'Transcription failed'
+      });
+      
+      setVilms(prev => prev.map(v => 
+        v.id === vilmId 
+          ? { ...v, isTranscribing: false, transcriptionError: 'Transcription failed' }
+          : v
+      ));
     }
   };
 
@@ -172,6 +200,6 @@ export const useVilmStorage = () => {
     getVilmById,
     searchVilms,
     refreshVilms: loadVilms,
-    transcriptionService
+    browserTranscriptionService
   };
 };
