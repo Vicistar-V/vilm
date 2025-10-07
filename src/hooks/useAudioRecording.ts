@@ -9,14 +9,17 @@ export const useAudioRecording = () => {
     isProcessing: false
   });
   const [currentRecording, setCurrentRecording] = useState<AudioRecording | null>(null);
-  const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
+  const [isCheckingPermission, setIsCheckingPermission] = useState(false);
   
   const durationTimer = useRef<NodeJS.Timeout | null>(null);
 
   const checkPermission = async (): Promise<boolean> => {
+    setIsCheckingPermission(true);
     const permission = await nativeAudioService.requestPermissions();
     setHasPermission(permission);
+    setIsCheckingPermission(false);
     return permission;
   };
 
@@ -159,6 +162,7 @@ export const useAudioRecording = () => {
     recordingState,
     currentRecording,
     hasPermission,
+    isCheckingPermission,
     startRecording,
     stopRecording,
     cancelRecording,

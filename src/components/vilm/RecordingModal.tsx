@@ -72,7 +72,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     startRecording, 
     stopRecording, 
     cancelRecording,
-    hasPermission 
+    hasPermission,
+    isCheckingPermission
   } = useAudioRecording();
 
   // Auto-save grace rule: save recording if app goes to background during finalize stage
@@ -191,7 +192,54 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     onClose();
   };
 
-  if (!hasPermission) {
+  // Show loading state while checking permission
+  if (isCheckingPermission || hasPermission === null) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            />
+
+            {/* Loading Modal */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{
+                type: 'spring',
+                damping: 30,
+                stiffness: 300,
+              }}
+              className={cn(
+                "fixed bottom-0 left-0 right-0 z-50",
+                "bg-card border-t border-vilm-border",
+                "rounded-t-3xl shadow-2xl",
+                "pb-safe-bottom p-6 pt-8 text-center"
+              )}
+            >
+              <div className="w-12 h-1 bg-vilm-border rounded-full mx-auto mb-8" />
+              
+              <h2 className="text-xl font-semibold text-vilm-text-primary mb-4">
+                Checking Permissions...
+              </h2>
+              
+              <p className="text-vilm-text-secondary mb-8">
+                Please wait while we check microphone access.
+              </p>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  if (hasPermission === false) {
     return (
       <AnimatePresence>
         {isOpen && (
