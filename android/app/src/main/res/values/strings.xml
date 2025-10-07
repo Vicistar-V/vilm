@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">vilmo-your-world</string>
+    <string name="title_activity_main">vilmo-your-world</string>
+    <string name="package_name">app.lovable.a50b1d70143b47269eadae7b248a8b9b</string>
+    <string name="custom_url_scheme">app.lovable.a50b1d70143b47269eadae7b248a8b9b</string>
+</resources>
