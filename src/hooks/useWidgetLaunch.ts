@@ -20,8 +20,13 @@ export const useWidgetLaunch = () => {
         const { VilmWidget } = await import('../plugins/VilmWidgetPlugin');
         const data = await VilmWidget.checkWidgetLaunch();
         
+        console.log('Widget launch data received:', data);
+        
         if (data.requirePermission || data.openFinalizeModal || data.storageFullError) {
+          console.log('Setting launch data - openFinalizeModal:', data.openFinalizeModal, 'audioPath:', data.audioPath);
           setLaunchData(data);
+        } else {
+          console.log('No widget launch action needed');
         }
       } catch (error) {
         console.error('Failed to check widget launch:', error);

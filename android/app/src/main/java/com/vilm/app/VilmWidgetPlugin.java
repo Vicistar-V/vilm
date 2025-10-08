@@ -20,11 +20,26 @@ public class VilmWidgetPlugin extends Plugin {
         boolean audioFromWidget = intent.getBooleanExtra("audioFromWidget", false);
         boolean storageFullError = intent.getBooleanExtra("storageFullError", false);
         
-        // Get temp audio file path
+        // Get temp audio file path with retry logic
         String audioPath = null;
         if (audioFromWidget) {
             audioPath = VilmRecordingService.getTempAudioPath(getContext());
             File audioFile = new File(audioPath);
+            
+            // Retry logic: MediaRecorder.stop() might still be finalizing the file
+            int maxRetries = 10; // 10 retries x 200ms = 2 seconds max
+            int retryCount = 0;
+            
+            while (!audioFile.exists() && retryCount < maxRetries) {
+                try {
+                    Thread.sleep(200); // Wait 200ms between retries
+                    retryCount++;
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            
             if (!audioFile.exists()) {
                 audioPath = null;
             }

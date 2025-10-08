@@ -104,7 +104,7 @@ public class VilmWidgetProvider extends AppWidgetProvider {
         // Check for storage error from service
         boolean storageError = prefs.getBoolean("storageError", false);
         
-        // Launch app to finalize screen
+        // Launch app to finalize screen (wait longer for MediaRecorder to finalize file)
         android.os.Handler handler = new android.os.Handler();
         handler.postDelayed(() -> {
             if (storageError) {
@@ -118,7 +118,7 @@ public class VilmWidgetProvider extends AppWidgetProvider {
                 prefs.edit().putBoolean(PREF_IS_RECORDING, false).apply();
             }
             updateAllWidgets(context);
-        }, 500);
+        }, 1500);
     }
 
     private void launchAppForPermission(Context context) {
