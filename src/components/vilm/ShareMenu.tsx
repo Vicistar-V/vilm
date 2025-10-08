@@ -306,7 +306,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
             variant="ghost"
           >
             <Download className="w-4 h-4" />
-            <span className="text-sm">Export</span>
+            <span className="text-sm">Download</span>
           </Button>
         </div>
       </div>
