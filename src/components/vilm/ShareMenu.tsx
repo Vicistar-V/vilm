@@ -39,9 +39,10 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
       
       onClose?.();
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unable to share Vilm';
       toast({
         title: "Share Failed",
-        description: "Unable to share Vilm",
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {
@@ -109,9 +110,10 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
       
       onClose?.();
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unable to share audio';
       toast({
         title: "Share Failed",
-        description: "Unable to share audio",
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {

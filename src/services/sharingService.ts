@@ -52,6 +52,8 @@ class SharingService {
       // If audio is requested and available
       if (includeAudio && vilm.audioFilename) {
         try {
+          console.log('[SharingService] Preparing audio for share:', vilm.audioFilename);
+          
           // Ensure temp_share directory exists
           try {
             await Filesystem.mkdir({
@@ -62,6 +64,7 @@ class SharingService {
           } catch (mkdirError) {
             // Directory already exists
           }
+          
           const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
           
           let extension = 'webm';
@@ -72,6 +75,7 @@ class SharingService {
           }
           
           const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;
+          console.log('[SharingService] Writing temp share file:', tempFileName);
           
           await Filesystem.writeFile({
             path: `temp_share/${tempFileName}`,
@@ -86,9 +90,13 @@ class SharingService {
 
           shareData.files = [fileUri.uri];
           shareData.url = fileUri.uri;
+          console.log('[SharingService] Audio prepared successfully');
           
         } catch (audioError) {
-          console.error('Audio prep failed:', audioError);
+          const errorMsg = audioError instanceof Error ? audioError.message : String(audioError);
+          console.error('[SharingService] Audio prep failed:', errorMsg);
+          // If audio was explicitly requested, fail the entire share
+          throw new Error(`Unable to share audio: ${errorMsg}`);
         }
       }
 

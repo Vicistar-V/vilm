@@ -276,8 +276,29 @@ class NativeAudioService {
     }
   }
 
+  async verifyAudioFileExists(filename: string): Promise<boolean> {
+    try {
+      await Filesystem.stat({
+        path: `${this.audioDirectory}/${filename}`,
+        directory: Directory.Data
+      });
+      console.log('[NativeAudio] Audio file exists:', filename);
+      return true;
+    } catch (error) {
+      console.log('[NativeAudio] Audio file not found in permanent storage:', filename);
+      return false;
+    }
+  }
+
   async getAudioFileData(filename: string): Promise<{ data: string; mimeType: string }> {
     try {
+      // Verify file exists first
+      const exists = await this.verifyAudioFileExists(filename);
+      if (!exists) {
+        throw new Error(`Audio file "${filename}" not found in storage`);
+      }
+
+      console.log('[NativeAudio] Reading audio file:', filename);
       const result = await Filesystem.readFile({
         path: `${this.audioDirectory}/${filename}`,
         directory: Directory.Data
@@ -290,9 +311,14 @@ class NativeAudioService {
         mimeType = 'audio/m4a';
       }
 
+      const dataLength = (result.data as string).length;
+      console.log('[NativeAudio] Audio file read successfully. Base64 length:', dataLength);
+
       return { data: result.data as string, mimeType };
     } catch (error) {
-      throw new Error(`Failed to get audio file data: ${error.message || 'Unknown error'}`);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('[NativeAudio] Failed to get audio file data:', errorMsg);
+      throw new Error(`Failed to read audio file: ${errorMsg}`);
     }
   }
 
