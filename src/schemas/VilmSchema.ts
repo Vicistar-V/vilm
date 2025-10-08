@@ -10,6 +10,7 @@ export interface VilmObject {
   transcriptionStatus?: 'pending' | 'processing' | 'completed' | 'failed';
   transcriptionError?: string;
   transcriptionRetryCount?: number;
+  isAudioReady?: boolean;
 }
 
 export class VilmDatabase extends Dexie {
@@ -17,8 +18,8 @@ export class VilmDatabase extends Dexie {
 
   constructor() {
     super('VilmDatabase');
-    this.version(1).stores({
-      vilms: 'id, title, transcript, timestamp, audioFilename, duration, transcriptionStatus, transcriptionError, transcriptionRetryCount'
+    this.version(2).stores({
+      vilms: 'id, title, transcript, timestamp, audioFilename, duration, transcriptionStatus, transcriptionError, transcriptionRetryCount, isAudioReady'
     });
   }
 }
