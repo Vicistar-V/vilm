@@ -147,7 +147,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
       setIsSaving(true);
       await impact();
       // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(noteTitle, currentRecording);
+      await onSave(noteTitle.trim() || generateDefaultTitle(), currentRecording);
       setNoteTitle('');
       setStage('recording');
       onClose();
