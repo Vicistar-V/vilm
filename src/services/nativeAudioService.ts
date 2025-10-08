@@ -306,15 +306,27 @@ class NativeAudioService {
 
   private async ensureTempAudioDirectory(): Promise<void> {
     try {
-      await Filesystem.mkdir({
+      // First check if directory exists
+      await Filesystem.readdir({
         path: this.tempAudioDirectory,
-        directory: Directory.Data,
-        recursive: true
+        directory: Directory.Data
       });
+      // Directory exists, we're done
+      return;
     } catch (error) {
-      const errorMsg = error.message?.toLowerCase() || '';
-      if (!errorMsg.includes('exist')) {
-        throw error;
+      // Directory doesn't exist, try to create it
+      try {
+        await Filesystem.mkdir({
+          path: this.tempAudioDirectory,
+          directory: Directory.Data,
+          recursive: true
+        });
+      } catch (mkdirError) {
+        const errorMsg = mkdirError.message?.toLowerCase() || '';
+        // Ignore if directory was created by another process
+        if (!errorMsg.includes('exist')) {
+          throw mkdirError;
+        }
       }
     }
   }

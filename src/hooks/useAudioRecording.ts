@@ -3,6 +3,7 @@ import { RecordingState } from '@/types/vilm';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
 import { transcriptionManager } from '@/services/transcriptionService';
 import { webSpeechTranscriptionService } from '@/services/webSpeechTranscriptionService';
+import { browserTranscriptionService } from '@/services/browserTranscriptionService';
 
 // Set Web Speech API as default transcription service
 transcriptionManager.setActiveService(webSpeechTranscriptionService);
@@ -57,6 +58,9 @@ export const useAudioRecording = () => {
         addDebugLog('⚠️ Cancelling previous transcription', 'warning');
         transcriptionManager.cancelActive();
       }
+      
+      // Also cancel any Whisper transcription in progress
+      browserTranscriptionService.cancelTranscription();
       
       // Clear any previous recording
       setCurrentRecording(null);
@@ -199,8 +203,9 @@ export const useAudioRecording = () => {
         durationTimer.current = null;
       }
 
-      // Cancel any active transcription
+      // Cancel any active transcription (both Web Speech and Whisper)
       transcriptionManager.cancelActive();
+      browserTranscriptionService.cancelTranscription();
       
       setIsTranscribing(false);
       setTranscript('');
