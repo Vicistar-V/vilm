@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Share, Trash2, FileText, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ImpactStyle } from '@capacitor/haptics';
 import { Clipboard } from '@capacitor/clipboard';
 import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
+import { dexieVilmStorage } from '@/services/dexieStorage';
 
 interface DetailViewProps {
   vilm: Vilm;
@@ -25,19 +26,34 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const { impact, selection } = useHaptics();
   const { toast } = useToast();
   const { phase } = useTranscriptionEngine();
-  const isSettingUp = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
+  const [currentVilm, setCurrentVilm] = useState(vilm);
+  const isSettingUp = phase === 'downloading' && currentVilm.transcriptionStatus === 'processing';
+  
+  // Poll for updates while transcription is processing
+  useEffect(() => {
+    if (currentVilm.transcriptionStatus !== 'processing') return;
+    
+    const interval = setInterval(async () => {
+      const fresh = await dexieVilmStorage.getVilmById(vilm.id);
+      if (fresh) {
+        setCurrentVilm(fresh);
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [currentVilm.transcriptionStatus, vilm.id]);
   
   // Safety check: if vilm is missing audioFilename, show error
   useEffect(() => {
-    if (!vilm.audioFilename) {
-      console.error('DetailView received vilm without audioFilename:', vilm.id);
+    if (!currentVilm.audioFilename) {
+      console.error('DetailView received vilm without audioFilename:', currentVilm.id);
       toast({
         title: "Audio Error",
         description: "Audio file is missing for this recording",
         variant: "destructive"
       });
     }
-  }, [vilm, toast]);
+  }, [currentVilm, toast]);
 
   const handleBack = async () => {
     await impact(ImpactStyle.Light);
@@ -46,18 +62,18 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
 
   const handleShare = async () => {
     await selection();
-    onShare(vilm);
+    onShare(currentVilm);
   };
 
   const handleDelete = async () => {
     await impact(ImpactStyle.Medium);
-    onDelete(vilm);
+    onDelete(currentVilm);
   };
 
   const handleShareTranscript = async () => {
     try {
       await impact(ImpactStyle.Light);
-      await sharingService.shareTranscript(vilm);
+      await sharingService.shareTranscript(currentVilm);
     } catch (error) {
       toast({
         title: "Share Failed",
@@ -70,9 +86,9 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const handleCopyTranscript = async () => {
     try {
       await impact(ImpactStyle.Light);
-      if (vilm.transcript) {
+      if (currentVilm.transcript) {
         await Clipboard.write({
-          string: vilm.transcript
+          string: currentVilm.transcript
         });
         toast({
           title: "Copied",
@@ -92,7 +108,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
     try {
       await impact(ImpactStyle.Medium);
       if (onRetryTranscription) {
-        onRetryTranscription(vilm.id);
+        onRetryTranscription(currentVilm.id);
         toast({
           title: "Retrying",
           description: "Starting transcription again..."
@@ -120,7 +136,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="flex-1 text-lg font-semibold text-foreground truncate">
-          {vilm.title}
+          {currentVilm.title}
         </h1>
       </header>
 
@@ -130,8 +146,8 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
           {/* Audio Player */}
           <div>
             <AudioPlayer 
-              audioFilename={vilm.audioFilename}
-              duration={vilm.duration}
+              audioFilename={currentVilm.audioFilename}
+              duration={currentVilm.duration}
               className="w-full"
             />
           </div>
@@ -146,12 +162,12 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     Transcript
                   </h3>
                    <TranscriptionStatus 
-                    transcript={vilm.transcript}
-                    transcriptionStatus={vilm.transcriptionStatus}
-                    transcriptionError={vilm.transcriptionError}
+                    transcript={currentVilm.transcript}
+                    transcriptionStatus={currentVilm.transcriptionStatus}
+                    transcriptionError={currentVilm.transcriptionError}
                   />
                 </div>
-                {vilm.transcript && vilm.transcript.trim() !== '' && vilm.transcriptionStatus !== 'processing' && (
+                {currentVilm.transcript && currentVilm.transcript.trim() !== '' && currentVilm.transcriptionStatus !== 'processing' && (
                   <div className="flex gap-2">
                     <Button 
                       variant="ghost" 
@@ -173,7 +189,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                 )}
               </div>
               
-              {vilm.transcriptionStatus === 'processing' ? (
+              {currentVilm.transcriptionStatus === 'processing' ? (
                 <div className="p-6 text-center">
                   <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3 relative">
                     <div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
@@ -188,7 +204,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     </p>
                   )}
                 </div>
-              ) : vilm.transcriptionError ? (
+              ) : currentVilm.transcriptionError ? (
                 <div className="p-6 rounded-lg border text-center" style={{ 
                   backgroundColor: 'hsl(var(--warning) / 0.1)', 
                   borderColor: 'hsl(var(--warning) / 0.2)' 
@@ -202,7 +218,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     Transcription Failed
                   </p>
                   <p className="text-sm mb-4" style={{ color: 'hsl(var(--warning) / 0.7)' }}>
-                    {vilm.transcriptionError}
+                    {currentVilm.transcriptionError}
                   </p>
                   <Button 
                     variant="outline"
@@ -217,10 +233,10 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     Try Again
                   </Button>
                 </div>
-              ) : vilm.transcript && vilm.transcript.trim() !== '' ? (
+              ) : currentVilm.transcript && currentVilm.transcript.trim() !== '' ? (
                 <div className="p-4 bg-muted/30 rounded-lg border-l-4 border-primary">
                   <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                    {vilm.transcript}
+                    {currentVilm.transcript}
                   </p>
                 </div>
               ) : (
@@ -245,7 +261,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="px-4 py-3 space-y-2">
           {/* Share Menu */}
-          <ShareMenu vilm={vilm} />
+          <ShareMenu vilm={currentVilm} />
           
           {/* Delete Action */}
           <Button
