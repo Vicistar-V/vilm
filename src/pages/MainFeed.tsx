@@ -56,8 +56,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     )}>
       {/* Header */}
       <header className={cn(
-        "flex items-center justify-between p-6",
-        "pt-safe-top bg-background",
+        "flex items-center justify-between px-6 pb-4",
+        "pt-[calc(env(safe-area-inset-top)+1rem)] bg-background",
         "border-b border-vilm-border/50"
       )}>
         <h1 className="text-2xl font-semibold text-vilm-text-primary">
