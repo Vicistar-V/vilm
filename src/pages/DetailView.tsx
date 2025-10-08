@@ -73,8 +73,33 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const handleShareTranscript = async () => {
     try {
       await impact(ImpactStyle.Light);
+      
+      if (!currentVilm.transcript || currentVilm.transcript.trim() === '') {
+        toast({
+          title: "No Transcript",
+          description: "No transcript available to share",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       await sharingService.shareTranscript(currentVilm);
+      
+      toast({
+        title: "✓ Shared",
+        description: "Transcript shared successfully",
+        duration: 2000
+      });
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Don't show error for user cancellation
+      if (errorMsg.toLowerCase().includes('cancel')) {
+        console.log('[DetailView] Share was canceled by user');
+        return;
+      }
+      
+      console.error('[DetailView] Share failed:', error);
       toast({
         title: "Share Failed",
         description: "Unable to share transcript",
@@ -86,16 +111,24 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const handleCopyTranscript = async () => {
     try {
       await impact(ImpactStyle.Light);
-      if (currentVilm.transcript) {
+      if (currentVilm.transcript && currentVilm.transcript.trim() !== '') {
         await Clipboard.write({
           string: currentVilm.transcript
         });
         toast({
-          title: "Copied",
-          description: "Transcript copied to clipboard"
+          title: "✓ Copied",
+          description: "Transcript copied to clipboard",
+          duration: 2000
+        });
+      } else {
+        toast({
+          title: "No Transcript",
+          description: "No transcript available to copy",
+          variant: "destructive"
         });
       }
     } catch (error) {
+      console.error('[DetailView] Copy failed:', error);
       toast({
         title: "Copy Failed",
         description: "Unable to copy transcript",
@@ -173,17 +206,21 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                       variant="ghost" 
                       size="sm" 
                       onClick={handleCopyTranscript}
-                      className="h-8 px-2"
+                      className="h-9 px-3 gap-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105 active:scale-95"
+                      title="Copy transcript to clipboard"
                     >
-                      <Copy className="w-3 h-3" />
+                      <Copy className="w-4 h-4" />
+                      <span className="text-xs font-medium">Copy</span>
                     </Button>
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={handleShareTranscript}
-                      className="h-8 px-2"
+                      className="h-9 px-3 gap-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105 active:scale-95"
+                      title="Share transcript"
                     >
-                      <Share className="w-3 h-3" />
+                      <Share className="w-4 h-4" />
+                      <span className="text-xs font-medium">Share</span>
                     </Button>
                   </div>
                 )}
