@@ -10,6 +10,13 @@ export interface VilmWidgetPlugin {
   }>;
   
   clearTempAudio(): Promise<void>;
+  
+  prepareWidgetAudio(options: { recordingId: string }): Promise<{
+    success: boolean;
+    size: number;
+    destPath: string;
+    uri: string;
+  }>;
 }
 
 export const VilmWidget = registerPlugin<VilmWidgetPlugin>('VilmWidget');

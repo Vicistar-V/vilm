@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep Vilm native classes from being stripped
+-keep class com.vilm.app.VilmWidgetPlugin { *; }
+-keep class com.vilm.app.VilmRecordingService { *; }
+-keep class com.vilm.app.VilmWidgetProvider { *; }

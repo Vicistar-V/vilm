@@ -93,30 +93,34 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   // Handle widget audio - skip recording and go straight to finalize
   useEffect(() => {
     if (isOpen && widgetAudioPath) {
-      // Load widget audio
+      // Prepare widget audio for save pipeline
       const loadWidgetAudio = async () => {
         try {
-          const { Filesystem } = await import('@capacitor/filesystem');
-          const { Capacitor } = await import('@capacitor/core');
+          const { VilmWidget } = await import('@/plugins/VilmWidgetPlugin');
           
-          // Get file info
-          const stat = await Filesystem.stat({
-            path: widgetAudioPath,
-          });
+          // Generate recording ID
+          const recordingId = uuidv4();
           
-          // Create recording object from widget audio
+          console.log('Preparing widget audio with recordingId:', recordingId);
+          
+          // Copy widget audio to expected location
+          const result = await VilmWidget.prepareWidgetAudio({ recordingId });
+          
+          console.log('Widget audio prepared successfully:', result);
+          
+          // Create recording object compatible with save pipeline
           const recording: AudioRecording = {
-            id: uuidv4(),
-            path: widgetAudioPath,
-            duration: 0, // We don't have duration yet, will be set on playback
-            size: stat.size,
+            id: recordingId,
+            path: result.uri,
+            duration: 0, // Will be set on playback
+            size: result.size,
             isTemporary: true
           };
           
           setWidgetRecording(recording);
           setStage('finalize');
         } catch (error) {
-          console.error('Failed to load widget audio:', error);
+          console.error('Failed to prepare widget audio:', error);
           onClose();
         }
       };
