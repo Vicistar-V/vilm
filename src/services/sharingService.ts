@@ -197,6 +197,40 @@ class SharingService {
     }
   }
 
+  async exportAudio(vilm: Vilm): Promise<string> {
+    try {
+      if (!vilm.audioFilename) {
+        throw new Error('No audio file available to export');
+      }
+
+      const { data: base64Data } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
+      const fileName = `${this.sanitizeFileName(vilm.title)}.m4a`;
+
+      // Ensure exports directory exists
+      try {
+        await Filesystem.mkdir({
+          path: 'exports',
+          directory: Directory.Documents,
+          recursive: true
+        });
+      } catch (mkdirError) {
+        // Directory already exists
+      }
+
+      // Write audio file to Documents/exports
+      await Filesystem.writeFile({
+        path: `exports/${fileName}`,
+        data: base64Data,
+        directory: Directory.Documents
+      });
+
+      return fileName;
+    } catch (error) {
+      console.error('Audio export failed:', error);
+      throw new Error('Failed to export audio file');
+    }
+  }
+
   async exportAsJSON(vilms: Vilm[]): Promise<string> {
     try {
       const fileName = `vilms_export_${Date.now()}.json`;

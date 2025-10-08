@@ -7,6 +7,7 @@ import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
+import { DownloadDialog } from './DownloadDialog';
 
 interface ShareMenuProps {
   vilm: Vilm;
@@ -18,6 +19,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete })
   const { toast } = useToast();
   const { impact } = useHaptics();
   const [isSharing, setIsSharing] = useState(false);
+  const [showDownloadDialog, setShowDownloadDialog] = useState(false);
 
   const handleShareAll = async () => {
     if (isSharing) return;
@@ -172,30 +174,9 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete })
     }
   };
 
-  const handleExportText = async () => {
-    if (isSharing) return;
-    
-    try {
-      setIsSharing(true);
-      await impact(ImpactStyle.Light);
-      
-      const fileName = await sharingService.exportAsText(vilm);
-      
-      toast({
-        title: "Exported",
-        description: `Saved as ${fileName} in Documents`
-      });
-      
-      onClose?.();
-    } catch (error) {
-      toast({
-        title: "Export Failed",
-        description: "Unable to export as text",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSharing(false);
-    }
+  const handleDownloadClick = async () => {
+    await impact(ImpactStyle.Light);
+    setShowDownloadDialog(true);
   };
 
   return (
@@ -253,7 +234,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete })
         {/* Secondary Actions */}
         <div className="flex gap-2">
           <Button
-            onClick={handleExportText}
+            onClick={handleDownloadClick}
             disabled={isSharing}
             className="flex-1 h-11 gap-2 hover:bg-muted/50 transition-all duration-200"
             variant="ghost"
@@ -276,6 +257,12 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete })
           </Button>
         </div>
       </div>
+
+      <DownloadDialog
+        vilm={vilm}
+        open={showDownloadDialog}
+        onOpenChange={setShowDownloadDialog}
+      />
     </Card>
   );
 };
