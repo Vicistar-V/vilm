@@ -120,22 +120,27 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
 
   const handleProgressClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     seekToPosition(e.clientX);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setIsDragging(true);
     seekToPosition(e.touches[0].clientX);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     if (!isDragging) return;
     seekToPosition(e.touches[0].clientX);
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setIsDragging(false);
   };
 
