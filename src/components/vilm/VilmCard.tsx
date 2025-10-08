@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Play, Clock } from "lucide-react";
 import { Vilm } from "@/types/vilm";
 import { TranscriptionStatus } from "@/components/vilm/TranscriptionStatus";
+import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 
 interface VilmCardProps {
   vilm: Vilm;
@@ -16,6 +17,8 @@ const formatDuration = (seconds: number): string => {
 };
 
 export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
+  const { phase } = useTranscriptionEngine();
+  const isSettingUp = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
   const hasTranscript = vilm.transcript && vilm.transcript.trim() !== '';
   
   return (
@@ -41,7 +44,9 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
             <div className="mb-2">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
-                <span className="text-sm text-muted-foreground">Processing...</span>
+                <span className="text-sm text-muted-foreground">
+                  {isSettingUp ? 'Setting up transcription (first time only)...' : 'Transcribing...'}
+                </span>
               </div>
             </div>
           ) : vilm.transcriptionError ? (

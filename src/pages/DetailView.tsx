@@ -11,6 +11,7 @@ import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
 import { ImpactStyle } from '@capacitor/haptics';
 import { Clipboard } from '@capacitor/clipboard';
+import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 
 interface DetailViewProps {
   vilm: Vilm;
@@ -23,6 +24,8 @@ interface DetailViewProps {
 export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, onDelete, onRetryTranscription }) => {
   const { impact, selection } = useHaptics();
   const { toast } = useToast();
+  const { phase } = useTranscriptionEngine();
+  const isSettingUp = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
 
   const handleBack = async () => {
     await impact(ImpactStyle.Light);
@@ -164,9 +167,14 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     <div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
-                  <p className="text-muted-foreground text-sm">
-                    Processing your recording...
+                  <p className="text-foreground font-medium text-sm mb-1">
+                    {isSettingUp ? 'Setting up transcription service' : 'Transcribing'}
                   </p>
+                  {isSettingUp && (
+                    <p className="text-muted-foreground text-xs">
+                      This only happens once
+                    </p>
+                  )}
                 </div>
               ) : vilm.transcriptionError ? (
                 <div className="p-6 bg-destructive/10 rounded-lg border border-destructive/20 text-center">
