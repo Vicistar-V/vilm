@@ -30,65 +30,83 @@ class NativeAudioService {
   }
 
   async startRecording(): Promise<{ success: boolean; recordingId?: string; error?: string; details?: any }> {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100
-        } 
-      });
-
-      // Prefer WebM format for consistency
-      let mimeType = 'audio/webm;codecs=opus';
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus';
-      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-        mimeType = 'audio/webm';
-      } else if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
-        mimeType = 'audio/mp4;codecs=mp4a.40.2';
-      }
-
-      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
-      this.audioChunks = [];
-      this.startTime = Date.now();
-      this.currentRecordingId = uuidv4();
-
-      await this.ensureTempAudioDirectory();
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
+    return new Promise((resolve) => {
+      const startTimeout = setTimeout(() => {
+        // Safety timeout in case onstart never fires
+        if (!this.startTime) {
+          this.startTime = Date.now();
         }
-      };
+      }, 500);
 
-      this.mediaRecorder.onerror = (event) => {
-        console.error('MediaRecorder error:', event);
-      };
+      (async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 44100
+            } 
+          });
 
-      this.mediaRecorder.start(1000);
-      
-      return { 
-        success: true, 
-        recordingId: this.currentRecordingId,
-        details: {
-          mimeType,
-          streamId: stream.id,
-          mediaRecorderState: this.mediaRecorder.state
+          // Prefer WebM format for consistency
+          let mimeType = 'audio/webm;codecs=opus';
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            mimeType = 'audio/webm;codecs=opus';
+          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            mimeType = 'audio/webm';
+          } else if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
+            mimeType = 'audio/mp4;codecs=mp4a.40.2';
+          }
+
+          this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+          this.audioChunks = [];
+          this.currentRecordingId = uuidv4();
+
+          await this.ensureTempAudioDirectory();
+
+          // Set startTime when recording actually starts
+          this.mediaRecorder.onstart = () => {
+            clearTimeout(startTimeout);
+            this.startTime = Date.now();
+            console.log('MediaRecorder started at:', this.startTime);
+          };
+
+          this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              this.audioChunks.push(event.data);
+            }
+          };
+
+          this.mediaRecorder.onerror = (event) => {
+            console.error('MediaRecorder error:', event);
+          };
+
+          this.mediaRecorder.start(1000);
+          
+          resolve({ 
+            success: true, 
+            recordingId: this.currentRecordingId,
+            details: {
+              mimeType,
+              streamId: stream.id,
+              mediaRecorderState: this.mediaRecorder.state
+            }
+          });
+        } catch (error) {
+          clearTimeout(startTimeout);
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          this.currentRecordingId = null;
+          resolve({ 
+            success: false, 
+            error: errorMsg,
+            details: {
+              stack: error instanceof Error ? error.stack : undefined,
+              name: error instanceof Error ? error.name : 'Unknown'
+            }
+          });
         }
-      };
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      this.currentRecordingId = null;
-      return { 
-        success: false, 
-        error: errorMsg,
-        details: {
-          stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : 'Unknown'
-        }
-      };
-    }
+      })();
+    });
   }
 
   async stopRecording(): Promise<AudioRecording | null> {

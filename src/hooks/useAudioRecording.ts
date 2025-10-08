@@ -70,14 +70,19 @@ export const useAudioRecording = () => {
         addDebugLog(`✅ Recording started with ID: ${result.recordingId}`, 'success');
         setCurrentRecordingId(result.recordingId);
         setHasPermission(true);
+        
+        // Wait a bit for MediaRecorder's onstart to fire
+        addDebugLog('⏳ Waiting for MediaRecorder to actually start...', 'info');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         setRecordingState({
           isRecording: true,
           duration: 0,
           isProcessing: false
         });
 
-        addDebugLog('Starting duration timer', 'success');
-        // Start duration timer
+        addDebugLog('Starting duration timer synced with actual recording', 'success');
+        // Start duration timer - now synced with actual MediaRecorder start
         durationTimer.current = setInterval(() => {
           setRecordingState(prev => ({
             ...prev,
@@ -85,7 +90,7 @@ export const useAudioRecording = () => {
           }));
         }, 1000);
 
-        addDebugLog('✅ Recording fully initialized', 'success');
+        addDebugLog('✅ Recording fully initialized and synced', 'success');
         return true;
       } else {
         addDebugLog('❌ Failed to start recording - no recordingId', 'error');
