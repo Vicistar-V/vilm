@@ -49,27 +49,29 @@ class SharingService {
         shareData.text = JSON.stringify(jsonData, null, 2);
       }
 
+      // Ensure temp_share directory exists
+      try {
+        await Filesystem.mkdir({
+          path: 'temp_share',
+          directory: Directory.Cache,
+          recursive: true
+        });
+      } catch (mkdirError) {
+        // Directory already exists
+      }
+
+      const filesToShare: string[] = [];
+      
       // If audio is requested and available
       if (includeAudio && vilm.audioFilename) {
         try {
           console.log('[SharingService] Preparing audio for share:', vilm.audioFilename);
           
-          // Ensure temp_share directory exists
-          try {
-            await Filesystem.mkdir({
-              path: 'temp_share',
-              directory: Directory.Cache,
-              recursive: true
-            });
-          } catch (mkdirError) {
-            // Directory already exists
-          }
-          
           const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
           
           const extension = 'm4a';
-          
-          const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;
+          const sanitizedTitle = this.sanitizeFileName(vilm.title);
+          const tempFileName = `${sanitizedTitle}.${extension}`;
           console.log('[SharingService] Writing temp share file:', tempFileName);
           
           await Filesystem.writeFile({
@@ -83,60 +85,50 @@ class SharingService {
             path: `temp_share/${tempFileName}`
           });
 
-          shareData.files = [fileUri.uri];
-          shareData.url = fileUri.uri;
+          filesToShare.push(fileUri.uri);
           console.log('[SharingService] Audio prepared successfully');
           
         } catch (audioError) {
           const errorMsg = audioError instanceof Error ? audioError.message : String(audioError);
           console.error('[SharingService] Audio prep failed:', errorMsg);
-          // If audio was explicitly requested, fail the entire share
           throw new Error(`Unable to share audio: ${errorMsg}`);
         }
       }
 
-      // Try to share with both text and files
-      try {
-        await Share.share(shareData);
-        
-        if (shareData.files) {
-          setTimeout(() => this.cleanupTempShareFiles(), 5000);
-        }
-      } catch (shareError) {
-        // If sharing with both text and files failed, try fallback strategy
-        if (includeAudio && includeTranscript && shareData.files) {
-          console.log('[SharingService] Share with both failed, trying fallback with text file...');
+      // If sharing both audio and transcript, create a text file to bundle
+      if (includeAudio && includeTranscript && filesToShare.length > 0) {
+        try {
+          const sanitizedTitle = this.sanitizeFileName(vilm.title);
+          const textFileName = `${sanitizedTitle}.txt`;
           
-          // Fallback: Create a text file and share both files
-          try {
-            const textFileName = `vilm_transcript_${vilm.id}_${Date.now()}.txt`;
-            await Filesystem.writeFile({
-              path: `temp_share/${textFileName}`,
-              data: shareData.text || '',
-              directory: Directory.Cache,
-              encoding: Encoding.UTF8
-            });
+          await Filesystem.writeFile({
+            path: `temp_share/${textFileName}`,
+            data: shareData.text || '',
+            directory: Directory.Cache,
+            encoding: Encoding.UTF8
+          });
 
-            const textFileUri = await Filesystem.getUri({
-              directory: Directory.Cache,
-              path: `temp_share/${textFileName}`
-            });
+          const textFileUri = await Filesystem.getUri({
+            directory: Directory.Cache,
+            path: `temp_share/${textFileName}`
+          });
 
-            // Share both files
-            await Share.share({
-              title: shareData.title,
-              files: [shareData.files[0], textFileUri.uri]
-            });
-
-            setTimeout(() => this.cleanupTempShareFiles(), 5000);
-            return;
-          } catch (fallbackError) {
-            console.error('[SharingService] Fallback share failed:', fallbackError);
-          }
+          filesToShare.push(textFileUri.uri);
+          console.log('[SharingService] Text file prepared for bundle');
+        } catch (textError) {
+          console.error('[SharingService] Failed to create text file:', textError);
         }
-        
-        // If all attempts failed, throw the original error
-        throw shareError;
+      }
+
+      // Share with files if available, otherwise just text
+      if (filesToShare.length > 0) {
+        await Share.share({
+          title: shareData.title,
+          files: filesToShare
+        });
+        setTimeout(() => this.cleanupTempShareFiles(), 5000);
+      } else {
+        await Share.share(shareData);
       }
 
     } catch (error) {
@@ -178,7 +170,7 @@ class SharingService {
 
   async exportAsText(vilm: Vilm): Promise<string> {
     try {
-      const fileName = `vilm_${vilm.title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.txt`;
+      const fileName = `${this.sanitizeFileName(vilm.title)}.txt`;
       
       let content = `📝 ${vilm.title}\n\n`;
       
@@ -281,6 +273,16 @@ class SharingService {
       console.error('Failed to cleanup temporary share files:', error);
       // Don't throw error as this is cleanup - shouldn't break the app
     }
+  }
+
+  private sanitizeFileName(title: string): string {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/_{2,}/g, '_')
+      .replace(/^_|_$/g, '')
+      .substring(0, 50) || 'vilm_recording';
   }
 
   private formatDuration(seconds: number): string {
