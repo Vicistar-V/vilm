@@ -12,7 +12,8 @@ const config: CapacitorConfig = {
   plugins: {
     StatusBar: {
       style: 'LIGHT',
-      backgroundColor: '#F8F8F8'
+      backgroundColor: '#F8F8F8',
+      overlaysWebView: false
     },
     Haptics: {
       enabled: true
