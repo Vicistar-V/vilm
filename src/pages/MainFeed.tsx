@@ -23,7 +23,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 }) => {
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState(false);
   const { impact, selection } = useHaptics();
-  const { vilms, loading, error, createVilm } = useVilmStorage();
+  const { vilms, loading, error, createVilm, deleteVilm } = useVilmStorage();
 
   const handleOpenRecording = async () => {
     await impact();
@@ -46,6 +46,14 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     } catch (error) {
       console.error('Failed to save vilm:', error);
       // You could show a toast error here
+    }
+  };
+
+  const handleDeleteVilm = async (vilmId: string) => {
+    try {
+      await deleteVilm(vilmId);
+    } catch (error) {
+      console.error('Failed to delete vilm:', error);
     }
   };
 
@@ -96,6 +104,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
                 key={vilm.id}
                 vilm={vilm}
                 onClick={() => onVilmClick(vilm)}
+                onDelete={handleDeleteVilm}
               />
             ))}
           </div>

@@ -8,10 +8,12 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { nativeAudioService } from '@/services/nativeAudioService';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
+import { TrashIcon } from './TrashIcon';
 
 interface VilmCardProps {
   vilm: Vilm;
   onClick: () => void;
+  onDelete?: (vilmId: string) => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -30,7 +32,7 @@ const formatReadableDate = (date: Date): string => {
   }
 };
 
-export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
+export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) => {
   const { phase } = useTranscriptionEngine();
   const { impact } = useHaptics();
   const isSettingUp = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
@@ -137,6 +139,14 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
     setIsDragging(false);
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      await impact();
+      onDelete(vilm.id);
+    }
+  };
+
   const progress = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
   
   return (
@@ -187,6 +197,22 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
               <span>{formatReadableDate(vilm.createdAt)}</span>
             </div>
           </div>
+
+          {/* Delete Button */}
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              className={cn(
+                "p-2 rounded-lg flex-shrink-0",
+                "text-muted-foreground",
+                "active:bg-destructive/10 active:text-destructive",
+                "transition-colors touch-manipulation"
+              )}
+              aria-label="Delete note"
+            >
+              <TrashIcon className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* Inline Audio Player */}
