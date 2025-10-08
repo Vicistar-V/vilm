@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner, toast } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -34,7 +34,12 @@ const AppContent = () => {
   useEffect(() => {
     if (!launchData) return;
 
-    if (launchData.requirePermission) {
+    if (launchData.storageFullError) {
+      toast.error('Failed to save recording. Your device storage is full.', {
+        duration: 5000,
+      });
+      clearLaunchData();
+    } else if (launchData.requirePermission) {
       setShowPermissionPrompt(true);
       clearLaunchData();
     } else if (launchData.openFinalizeModal && launchData.audioPath) {

@@ -6,6 +6,7 @@ export interface VilmWidgetPlugin {
     openFinalizeModal: boolean;
     audioFromWidget: boolean;
     audioPath: string | null;
+    storageFullError: boolean;
   }>;
   
   clearTempAudio(): Promise<void>;

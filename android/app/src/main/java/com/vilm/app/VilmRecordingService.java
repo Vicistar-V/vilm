@@ -56,6 +56,14 @@ public class VilmRecordingService extends Service {
         // Start foreground service with notification
         startForeground(NOTIFICATION_ID, createNotification("Recording..."));
         
+        // Check if storage is available
+        if (!isStorageAvailable()) {
+            android.content.SharedPreferences prefs = getSharedPreferences("VilmWidgetPrefs", Context.MODE_PRIVATE);
+            prefs.edit().putBoolean("storageError", true).apply();
+            stopSelf();
+            return;
+        }
+        
         try {
             // Prepare file path
             File cacheDir = getCacheDir();
@@ -80,6 +88,11 @@ public class VilmRecordingService extends Service {
             
         } catch (IOException e) {
             e.printStackTrace();
+            // Check if it's a storage issue
+            if (e.getMessage() != null && (e.getMessage().contains("No space") || e.getMessage().contains("ENOSPC"))) {
+                android.content.SharedPreferences prefs = getSharedPreferences("VilmWidgetPrefs", Context.MODE_PRIVATE);
+                prefs.edit().putBoolean("storageError", true).apply();
+            }
             stopSelf();
         }
     }
@@ -140,6 +153,61 @@ public class VilmRecordingService extends Service {
         File cacheDir = context.getCacheDir();
         File audioFile = new File(cacheDir, TEMP_AUDIO_FILENAME);
         return audioFile.getAbsolutePath();
+    }
+
+    private boolean isStorageAvailable() {
+        try {
+            File cacheDir = getCacheDir();
+            if (cacheDir == null) return false;
+            
+            // Check if we have at least 10MB of free space
+            long freeSpace = cacheDir.getUsableSpace();
+            long requiredSpace = 10 * 1024 * 1024; // 10MB
+            
+            return freeSpace > requiredSpace;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        
+        // Attempt to save recording if service is killed unexpectedly
+        if (mediaRecorder != null) {
+            try {
+                mediaRecorder.stop();
+                mediaRecorder.release();
+                mediaRecorder = null;
+                
+                // Mark recording as interrupted in SharedPreferences
+                android.content.SharedPreferences prefs = getSharedPreferences("VilmWidgetPrefs", Context.MODE_PRIVATE);
+                prefs.edit()
+                    .putBoolean("recordingInterrupted", true)
+                    .putBoolean("isRecording", false)
+                    .apply();
+                
+            } catch (Exception e) {
+                // MediaRecorder was already stopped or in invalid state
+                e.printStackTrace();
+                
+                // Delete partial file if it exists
+                if (currentRecordingPath != null) {
+                    File audioFile = new File(currentRecordingPath);
+                    if (audioFile.exists()) {
+                        audioFile.delete();
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onTaskRemoved(Intent rootIntent) {
+        super.onTaskRemoved(rootIntent);
+        // Handle case where user swipes app away while recording
+        onDestroy();
     }
 
     @Override

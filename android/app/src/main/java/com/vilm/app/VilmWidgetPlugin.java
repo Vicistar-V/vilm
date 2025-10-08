@@ -18,6 +18,7 @@ public class VilmWidgetPlugin extends Plugin {
         boolean requirePermission = intent.getBooleanExtra("requirePermission", false);
         boolean openFinalizeModal = intent.getBooleanExtra("openFinalizeModal", false);
         boolean audioFromWidget = intent.getBooleanExtra("audioFromWidget", false);
+        boolean storageFullError = intent.getBooleanExtra("storageFullError", false);
         
         // Get temp audio file path
         String audioPath = null;
@@ -34,6 +35,7 @@ public class VilmWidgetPlugin extends Plugin {
         result.put("openFinalizeModal", openFinalizeModal);
         result.put("audioFromWidget", audioFromWidget);
         result.put("audioPath", audioPath);
+        result.put("storageFullError", storageFullError);
         
         call.resolve(result);
         
@@ -41,6 +43,7 @@ public class VilmWidgetPlugin extends Plugin {
         intent.removeExtra("requirePermission");
         intent.removeExtra("openFinalizeModal");
         intent.removeExtra("audioFromWidget");
+        intent.removeExtra("storageFullError");
     }
 
     @PluginMethod

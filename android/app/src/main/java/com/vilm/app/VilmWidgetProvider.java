@@ -101,11 +101,22 @@ public class VilmWidgetProvider extends AppWidgetProvider {
         serviceIntent.putExtra("discardRecording", false);
         context.startService(serviceIntent);
         
+        // Check for storage error from service
+        boolean storageError = prefs.getBoolean("storageError", false);
+        
         // Launch app to finalize screen
         android.os.Handler handler = new android.os.Handler();
         handler.postDelayed(() -> {
-            launchAppWithRecording(context);
-            prefs.edit().putBoolean(PREF_IS_RECORDING, false).apply();
+            if (storageError) {
+                launchAppWithStorageError(context);
+                prefs.edit()
+                    .putBoolean(PREF_IS_RECORDING, false)
+                    .putBoolean("storageError", false)
+                    .apply();
+            } else {
+                launchAppWithRecording(context);
+                prefs.edit().putBoolean(PREF_IS_RECORDING, false).apply();
+            }
             updateAllWidgets(context);
         }, 500);
     }
@@ -127,6 +138,16 @@ public class VilmWidgetProvider extends AppWidgetProvider {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             launchIntent.putExtra("openFinalizeModal", true);
             launchIntent.putExtra("audioFromWidget", true);
+            context.startActivity(launchIntent);
+        }
+    }
+
+    private void launchAppWithStorageError(Context context) {
+        Intent launchIntent = context.getPackageManager()
+            .getLaunchIntentForPackage(context.getPackageName());
+        if (launchIntent != null) {
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            launchIntent.putExtra("storageFullError", true);
             context.startActivity(launchIntent);
         }
     }
@@ -178,12 +199,12 @@ public class VilmWidgetProvider extends AppWidgetProvider {
             views = new RemoteViews(context.getPackageName(), R.layout.vilm_widget_idle);
         }
         
-        // Set up click handler
+        // Set up click handler - make entire widget clickable
         Intent clickIntent = new Intent(context, VilmWidgetProvider.class);
         clickIntent.setAction(ACTION_WIDGET_CLICK);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
             context, 0, clickIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        views.setOnClickPendingIntent(R.id.widget_icon, pendingIntent);
+        views.setOnClickPendingIntent(R.id.widget_container, pendingIntent);
         
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }

@@ -6,6 +6,7 @@ interface WidgetLaunchData {
   openFinalizeModal: boolean;
   audioFromWidget: boolean;
   audioPath: string | null;
+  storageFullError: boolean;
 }
 
 export const useWidgetLaunch = () => {
@@ -19,7 +20,7 @@ export const useWidgetLaunch = () => {
         const { VilmWidget } = await import('../plugins/VilmWidgetPlugin');
         const data = await VilmWidget.checkWidgetLaunch();
         
-        if (data.requirePermission || data.openFinalizeModal) {
+        if (data.requirePermission || data.openFinalizeModal || data.storageFullError) {
           setLaunchData(data);
         }
       } catch (error) {

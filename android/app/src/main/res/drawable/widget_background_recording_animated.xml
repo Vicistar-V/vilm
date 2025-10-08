@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+    
+    <!-- Full opacity -->
+    <item android:duration="1000">
+        <shape android:shape="rectangle">
+            <solid android:color="#FF3B30" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    
+    <!-- Slightly transparent (pulse effect) -->
+    <item android:duration="1000">
+        <shape android:shape="rectangle">
+            <solid android:color="#D9FF3B30" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+    
+</animation-list>
