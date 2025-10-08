@@ -33,9 +33,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     permissionsService.checkAllPermissions().catch(console.error);
   }, []);
 
-  const handleOpenRecording = async () => {
-    await impact();
+  const handleOpenRecording = () => {
     setIsRecordingModalOpen(true);
+    impact().catch(console.error); // fire-and-forget for instant UI
   };
 
   const handleSettingsClick = async () => {

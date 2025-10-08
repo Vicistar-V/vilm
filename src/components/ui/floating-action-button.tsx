@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Mic } from 'lucide-react';
 
@@ -13,9 +13,23 @@ export const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({
   className,
   disabled = false
 }) => {
+  const firedRef = useRef(false);
+
   return (
     <button
-      onClick={onClick}
+      onPointerDown={(e) => {
+        if (disabled || firedRef.current) return;
+        firedRef.current = true;
+        onClick();
+        e.preventDefault();
+      }}
+      onClick={(e) => {
+        if (firedRef.current) {
+          firedRef.current = false;
+          return;
+        }
+        onClick();
+      }}
       disabled={disabled}
       className={cn(
         // Base styles - perfectly circular FAB
