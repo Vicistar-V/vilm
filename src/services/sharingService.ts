@@ -49,15 +49,16 @@ class SharingService {
         shareData.text = JSON.stringify(jsonData, null, 2);
       }
 
-      // Ensure temp_share directory exists
+      // Ensure temp_share directory exists in Documents for better sharing compatibility
       try {
         await Filesystem.mkdir({
           path: 'temp_share',
-          directory: Directory.Cache,
+          directory: Directory.Documents,
           recursive: true
         });
+        console.log('[SharingService] temp_share directory ready in Documents');
       } catch (mkdirError) {
-        // Directory already exists
+        console.warn('[SharingService] mkdir failed:', mkdirError);
       }
 
       const filesToShare: string[] = [];
@@ -77,13 +78,25 @@ class SharingService {
           await Filesystem.writeFile({
             path: `temp_share/${tempFileName}`,
             data: base64Data,
-            directory: Directory.Cache
+            directory: Directory.Documents
           });
 
+          // Verify file was written successfully
           const fileUri = await Filesystem.getUri({
-            directory: Directory.Cache,
+            directory: Directory.Documents,
             path: `temp_share/${tempFileName}`
           });
+
+          // Verify file exists
+          try {
+            await Filesystem.stat({
+              path: `temp_share/${tempFileName}`,
+              directory: Directory.Documents
+            });
+            console.log('[SharingService] Audio file verified at:', fileUri.uri);
+          } catch (statError) {
+            throw new Error('Audio file verification failed - file not found after write');
+          }
 
           filesToShare.push(fileUri.uri);
           console.log('[SharingService] Audio prepared successfully');
@@ -104,17 +117,17 @@ class SharingService {
           await Filesystem.writeFile({
             path: `temp_share/${textFileName}`,
             data: shareData.text || '',
-            directory: Directory.Cache,
+            directory: Directory.Documents,
             encoding: Encoding.UTF8
           });
 
           const textFileUri = await Filesystem.getUri({
-            directory: Directory.Cache,
+            directory: Directory.Documents,
             path: `temp_share/${textFileName}`
           });
 
           filesToShare.push(textFileUri.uri);
-          console.log('[SharingService] Text file prepared for bundle');
+          console.log('[SharingService] Text file prepared for bundle at:', textFileUri.uri);
         } catch (textError) {
           console.error('[SharingService] Failed to create text file:', textError);
         }
@@ -122,11 +135,13 @@ class SharingService {
 
       // Share with files if available, otherwise just text
       if (filesToShare.length > 0) {
+        console.log('[SharingService] Sharing files:', filesToShare);
         await Share.share({
           title: shareData.title,
           files: filesToShare
         });
-        setTimeout(() => this.cleanupTempShareFiles(), 5000);
+        // Increased cleanup delay to 30 seconds to ensure Share API has time to access files
+        setTimeout(() => this.cleanupTempShareFiles(), 30000);
       } else {
         await Share.share(shareData);
       }
@@ -293,30 +308,31 @@ class SharingService {
 
   private async cleanupTempShareFiles(): Promise<void> {
     try {
+      console.log('[SharingService] Starting cleanup of temporary share files');
+      
       // Ensure temp_share directory exists first
       try {
         await Filesystem.mkdir({
           path: 'temp_share',
-          directory: Directory.Cache,
+          directory: Directory.Documents,
           recursive: true
         });
       } catch (mkdirError) {
-        // Directory might already exist, continue
-        console.debug('Temp share directory already exists or mkdir failed:', mkdirError);
+        console.debug('[SharingService] Temp share directory already exists or mkdir failed:', mkdirError);
       }
 
       // Clean up temporary share files
       const result = await Filesystem.readdir({
         path: 'temp_share',
-        directory: Directory.Cache
+        directory: Directory.Documents
       });
 
       if (!result.files || result.files.length === 0) {
-        console.debug('No temporary share files to cleanup');
+        console.debug('[SharingService] No temporary share files to cleanup');
         return;
       }
 
-      console.debug(`Cleaning up ${result.files.length} temporary share files`);
+      console.log(`[SharingService] Cleaning up ${result.files.length} temporary share files`);
       
       for (const file of result.files) {
         if (!file.name) continue;
@@ -324,16 +340,17 @@ class SharingService {
         try {
           await Filesystem.deleteFile({
             path: `temp_share/${file.name}`,
-            directory: Directory.Cache
+            directory: Directory.Documents
           });
-          console.debug(`Successfully deleted temp share file: ${file.name}`);
+          console.debug(`[SharingService] Deleted temp share file: ${file.name}`);
         } catch (deleteError) {
-          console.error(`Failed to cleanup temp share file ${file.name}:`, deleteError);
+          console.error(`[SharingService] Failed to delete temp share file ${file.name}:`, deleteError);
           // Continue with other files even if one fails
         }
       }
+      console.log('[SharingService] Cleanup completed');
     } catch (error) {
-      console.error('Failed to cleanup temporary share files:', error);
+      console.error('[SharingService] Failed to cleanup temporary share files:', error);
       // Don't throw error as this is cleanup - shouldn't break the app
     }
   }
