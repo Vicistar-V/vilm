@@ -29,6 +29,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(vilm.duration);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +44,10 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
         
         const audio = new Audio(url);
         audioRef.current = audio;
+        
+        audio.addEventListener('loadedmetadata', () => {
+          setAudioDuration(audio.duration);
+        });
         
         audio.addEventListener('timeupdate', () => {
           if (!isDragging) {
@@ -94,7 +99,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
     const rect = progressRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, x / rect.width));
-    const newTime = percentage * vilm.duration;
+    const newTime = percentage * (audioRef.current.duration || audioDuration);
     
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
@@ -121,7 +126,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
     setIsDragging(false);
   };
 
-  const progress = vilm.duration > 0 ? (currentTime / vilm.duration) * 100 : 0;
+  const progress = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
   
   return (
     <Card 
