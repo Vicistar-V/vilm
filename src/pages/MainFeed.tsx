@@ -111,7 +111,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
               Vilm
             </h1>
             <p className="text-sm text-muted-foreground">
-              Voice notes, transcribed
+              save your thoughts quicky
             </p>
           </div>
           
