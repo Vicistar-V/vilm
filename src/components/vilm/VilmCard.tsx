@@ -30,13 +30,13 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
             </h3>
             <TranscriptionStatus 
               transcript={vilm.transcript}
-              isTranscribing={vilm.isTranscribing}
+              transcriptionStatus={vilm.transcriptionStatus}
               transcriptionError={vilm.transcriptionError}
               className="flex-shrink-0"
             />
           </div>
           
-          {vilm.isTranscribing ? (
+          {vilm.transcriptionStatus === 'processing' ? (
             <div className="mb-2 space-y-1">
               <div className="h-3 bg-muted animate-pulse rounded w-full"></div>
               <div className="h-3 bg-muted animate-pulse rounded w-3/4"></div>

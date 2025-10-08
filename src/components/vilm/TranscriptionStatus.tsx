@@ -4,18 +4,18 @@ import { cn } from '@/lib/utils';
 
 interface TranscriptionStatusProps {
   transcript?: string;
-  isTranscribing?: boolean;
+  transcriptionStatus?: 'pending' | 'processing' | 'completed' | 'failed';
   transcriptionError?: string;
   className?: string;
 }
 
 export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
   transcript,
-  isTranscribing = false,
+  transcriptionStatus,
   transcriptionError,
   className
 }) => {
-  if (transcriptionError) {
+  if (transcriptionStatus === 'failed' || transcriptionError) {
     return (
       <div className={cn("flex items-center gap-2 text-xs text-destructive", className)}>
         <AlertCircle className="w-3 h-3" />
@@ -24,7 +24,7 @@ export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
     );
   }
 
-  if (isTranscribing) {
+  if (transcriptionStatus === 'processing') {
     return (
       <div className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
         <Loader2 className="w-3 h-3 animate-spin" />

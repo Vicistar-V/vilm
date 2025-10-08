@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RecordingState } from '@/types/vilm';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
+import { transcriptionManager } from '@/services/transcriptionService';
 import { webSpeechTranscriptionService } from '@/services/webSpeechTranscriptionService';
+
+// Set Web Speech API as default transcription service
+transcriptionManager.setActiveService(webSpeechTranscriptionService);
 
 export interface DebugLogEntry {
   timestamp: string;
@@ -47,6 +51,12 @@ export const useAudioRecording = () => {
   const startRecording = useCallback(async (): Promise<boolean> => {
     try {
       addDebugLog('🎙️ Starting recording process...', 'info');
+      
+      // Cancel any active transcription when starting new recording
+      if (transcriptionManager.hasActiveTranscription()) {
+        addDebugLog('⚠️ Cancelling previous transcription', 'warning');
+        transcriptionManager.cancelActive();
+      }
       
       // Clear any previous recording
       setCurrentRecording(null);
@@ -128,7 +138,7 @@ export const useAudioRecording = () => {
 
       const recording = await nativeAudioService.stopRecording();
       
-      if (recording) {
+      if (recording && recording.blob) {
         // Start transcription immediately after recording stops
         setIsTranscribing(true);
         setTranscript('');
@@ -136,19 +146,26 @@ export const useAudioRecording = () => {
         
         addDebugLog('🎯 Starting post-recording transcription...', 'info');
         
-        // Transcribe the recorded audio
-        const result = await webSpeechTranscriptionService.transcribeAudioBlob(
-          recording.blob,
-          (progressTranscript) => {
-            setTranscriptionProgress(progressTranscript);
+        try {
+          // Transcribe the recorded audio using the transcription manager
+          const result = await transcriptionManager.transcribe(
+            recording.blob,
+            (progressTranscript) => {
+              setTranscriptionProgress(progressTranscript);
+            }
+          );
+          
+          if (result.isSuccess) {
+            setTranscript(result.transcript);
+            addDebugLog('✅ Transcription completed', 'success');
+          } else {
+            setTranscript(''); // Clear transcript on failure
+            addDebugLog(`⚠️ Transcription failed: ${result.error || 'Unknown error'}`, 'error');
           }
-        );
-        
-        if (result.isSuccess) {
-          setTranscript(result.transcript);
-          addDebugLog('✅ Transcription completed', 'success');
-        } else {
-          addDebugLog(`⚠️ Transcription failed: ${result.error}`, 'warning');
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          addDebugLog(`❌ Transcription exception: ${errorMsg}`, 'error');
+          setTranscript('');
         }
         
         setIsTranscribing(false);
@@ -182,6 +199,9 @@ export const useAudioRecording = () => {
         durationTimer.current = null;
       }
 
+      // Cancel any active transcription
+      transcriptionManager.cancelActive();
+      
       setIsTranscribing(false);
       setTranscript('');
       setTranscriptionProgress('');

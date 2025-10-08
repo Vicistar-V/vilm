@@ -43,8 +43,9 @@ export const useVilmStorage = () => {
         transcript,
         duration,
         audioFilename,
-        isTranscribing: true,
-        transcriptionError: undefined
+        transcriptionStatus: 'completed' as const,
+        transcriptionError: undefined,
+        transcriptionRetryCount: 0
       };
       
       debugLogger.info('Vilm', 'Saving to database...');
@@ -134,13 +135,13 @@ export const useVilmStorage = () => {
       debugLogger.info('Transcription', `Starting for: ${audioFilename}`);
       
       await dexieVilmStorage.updateVilm(vilmId, { 
-        isTranscribing: true,
+        transcriptionStatus: 'processing',
         transcriptionError: undefined 
       });
       
       setVilms(prev => prev.map(v => 
         v.id === vilmId 
-          ? { ...v, isTranscribing: true, transcriptionError: undefined }
+          ? { ...v, transcriptionStatus: 'processing' as const, transcriptionError: undefined }
           : v
       ));
 
@@ -155,12 +156,12 @@ export const useVilmStorage = () => {
         
         await dexieVilmStorage.updateVilm(vilmId, {
           transcript: result.transcript,
-          isTranscribing: false
+          transcriptionStatus: 'completed'
         });
         
         setVilms(prev => prev.map(v => 
           v.id === vilmId 
-            ? { ...v, transcript: result.transcript, isTranscribing: false }
+            ? { ...v, transcript: result.transcript, transcriptionStatus: 'completed' as const }
             : v
         ));
       } else {
@@ -168,13 +169,13 @@ export const useVilmStorage = () => {
         debugLogger.error('Transcription', `Failed: ${errorMsg}`);
         
         await dexieVilmStorage.updateVilm(vilmId, {
-          isTranscribing: false,
+          transcriptionStatus: 'failed',
           transcriptionError: errorMsg
         });
         
         setVilms(prev => prev.map(v => 
           v.id === vilmId 
-            ? { ...v, isTranscribing: false, transcriptionError: errorMsg }
+            ? { ...v, transcriptionStatus: 'failed' as const, transcriptionError: errorMsg }
             : v
         ));
       }
@@ -183,13 +184,13 @@ export const useVilmStorage = () => {
       debugLogger.error('Transcription', `Error: ${errorMsg}`);
       
       await dexieVilmStorage.updateVilm(vilmId, {
-        isTranscribing: false,
+        transcriptionStatus: 'failed',
         transcriptionError: `Transcription failed: ${errorMsg}`
       });
       
       setVilms(prev => prev.map(v => 
         v.id === vilmId 
-          ? { ...v, isTranscribing: false, transcriptionError: `Transcription failed: ${errorMsg}` }
+          ? { ...v, transcriptionStatus: 'failed' as const, transcriptionError: `Transcription failed: ${errorMsg}` }
           : v
       ));
     }

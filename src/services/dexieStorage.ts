@@ -17,8 +17,9 @@ class DexieVilmStorage {
       updatedAt: vilmObject.timestamp,
       audioFilename: vilmObject.audioFilename,
       audioPath: undefined, // Will be constructed when needed
-      isTranscribing: vilmObject.isTranscribing,
-      transcriptionError: vilmObject.transcriptionError
+      transcriptionStatus: vilmObject.transcriptionStatus,
+      transcriptionError: vilmObject.transcriptionError,
+      transcriptionRetryCount: vilmObject.transcriptionRetryCount
     };
   }
 
@@ -32,8 +33,9 @@ class DexieVilmStorage {
       timestamp: now,
       audioFilename: vilm.audioFilename || '',
       duration: vilm.duration,
-      isTranscribing: vilm.isTranscribing,
-      transcriptionError: vilm.transcriptionError
+      transcriptionStatus: vilm.transcriptionStatus,
+      transcriptionError: vilm.transcriptionError,
+      transcriptionRetryCount: vilm.transcriptionRetryCount
     });
   }
 
@@ -72,8 +74,9 @@ class DexieVilmStorage {
     if (updates.transcript !== undefined) updateData.transcript = updates.transcript;
     if (updates.duration !== undefined) updateData.duration = updates.duration;
     if (updates.audioFilename !== undefined) updateData.audioFilename = updates.audioFilename;
-    if (updates.isTranscribing !== undefined) updateData.isTranscribing = updates.isTranscribing;
+    if (updates.transcriptionStatus !== undefined) updateData.transcriptionStatus = updates.transcriptionStatus;
     if (updates.transcriptionError !== undefined) updateData.transcriptionError = updates.transcriptionError;
+    if (updates.transcriptionRetryCount !== undefined) updateData.transcriptionRetryCount = updates.transcriptionRetryCount;
     
     await vilmDB.vilms.update(id, updateData);
   }

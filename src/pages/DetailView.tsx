@@ -110,13 +110,13 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     <FileText className="w-5 h-5" />
                     Transcript
                   </h3>
-                  <TranscriptionStatus 
+                   <TranscriptionStatus 
                     transcript={vilm.transcript}
-                    isTranscribing={vilm.isTranscribing}
+                    transcriptionStatus={vilm.transcriptionStatus}
                     transcriptionError={vilm.transcriptionError}
                   />
                 </div>
-                {vilm.transcript && vilm.transcript.trim() !== '' && !vilm.isTranscribing && (
+                {vilm.transcript && vilm.transcript.trim() !== '' && vilm.transcriptionStatus !== 'processing' && (
                   <div className="flex gap-2">
                     <Button 
                       variant="ghost" 
@@ -138,7 +138,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                 )}
               </div>
               
-              {vilm.isTranscribing ? (
+              {vilm.transcriptionStatus === 'processing' ? (
                 <div className="p-6 bg-muted/20 rounded-lg">
                   <div className="space-y-3">
                     <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
