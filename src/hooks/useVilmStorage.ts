@@ -35,10 +35,10 @@ export const useVilmStorage = () => {
       const vilm = {
         id,
         title,
-        transcript,
+        transcript: '',
         duration,
         audioFilename,
-        transcriptionStatus: 'completed' as const,
+        transcriptionStatus: 'processing' as const,
         transcriptionError: undefined,
         transcriptionRetryCount: 0
       };

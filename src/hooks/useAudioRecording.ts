@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RecordingState } from '@/types/vilm';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
-import { transcriptionManager } from '@/services/transcriptionService';
-import { webSpeechTranscriptionService } from '@/services/webSpeechTranscriptionService';
-import { browserTranscriptionService } from '@/services/browserTranscriptionService';
-
-// Set Web Speech API as default transcription service
-transcriptionManager.setActiveService(webSpeechTranscriptionService);
 
 export interface DebugLogEntry {
   timestamp: string;
@@ -25,10 +19,6 @@ export const useAudioRecording = () => {
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
   const [isCheckingPermission, setIsCheckingPermission] = useState(false);
   const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
-  const [transcript, setTranscript] = useState<string>('');
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcriptionProgress, setTranscriptionProgress] = useState<string>('');
-  
   const durationTimer = useRef<NodeJS.Timeout | null>(null);
 
   const addDebugLog = (message: string, level: DebugLogEntry['level'] = 'info') => {
@@ -52,15 +42,6 @@ export const useAudioRecording = () => {
   const startRecording = useCallback(async (): Promise<boolean> => {
     try {
       addDebugLog('🎙️ Starting recording process...', 'info');
-      
-      // Cancel any active transcription when starting new recording
-      if (transcriptionManager.hasActiveTranscription()) {
-        addDebugLog('⚠️ Cancelling previous transcription', 'warning');
-        transcriptionManager.cancelActive();
-      }
-      
-      // Also cancel any Whisper transcription in progress
-      browserTranscriptionService.cancelTranscription();
       
       // Clear any previous recording
       setCurrentRecording(null);
@@ -142,39 +123,6 @@ export const useAudioRecording = () => {
 
       const recording = await nativeAudioService.stopRecording();
       
-      if (recording && recording.blob) {
-        // Start transcription immediately after recording stops
-        setIsTranscribing(true);
-        setTranscript('');
-        setTranscriptionProgress('');
-        
-        addDebugLog('🎯 Starting post-recording transcription...', 'info');
-        
-        try {
-          // Transcribe the recorded audio using the transcription manager
-          const result = await transcriptionManager.transcribe(
-            recording.blob,
-            (progressTranscript) => {
-              setTranscriptionProgress(progressTranscript);
-            }
-          );
-          
-          if (result.isSuccess) {
-            setTranscript(result.transcript);
-            addDebugLog('✅ Transcription completed', 'success');
-          } else {
-            setTranscript(''); // Clear transcript on failure
-            addDebugLog(`⚠️ Transcription failed: ${result.error || 'Unknown error'}`, 'error');
-          }
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-          addDebugLog(`❌ Transcription exception: ${errorMsg}`, 'error');
-          setTranscript('');
-        }
-        
-        setIsTranscribing(false);
-      }
-      
       setRecordingState({
         isRecording: false,
         duration: 0,
@@ -186,7 +134,6 @@ export const useAudioRecording = () => {
       return recording;
     } catch (error) {
       console.error('Failed to stop recording:', error);
-      setIsTranscribing(false);
       setRecordingState({
         isRecording: false,
         duration: 0,
@@ -202,14 +149,6 @@ export const useAudioRecording = () => {
         clearInterval(durationTimer.current);
         durationTimer.current = null;
       }
-
-      // Cancel any active transcription (both Web Speech and Whisper)
-      transcriptionManager.cancelActive();
-      browserTranscriptionService.cancelTranscription();
-      
-      setIsTranscribing(false);
-      setTranscript('');
-      setTranscriptionProgress('');
 
       if (recordingState.isRecording) {
         await nativeAudioService.stopRecording();
@@ -250,14 +189,12 @@ export const useAudioRecording = () => {
     recordingState,
     currentRecording,
     hasPermission,
+    currentRecordingId,
     isCheckingPermission,
+    debugLog,
+    checkPermission,
     startRecording,
     stopRecording,
-    cancelRecording,
-    checkPermission,
-    debugLog,
-    transcript,
-    isTranscribing,
-    transcriptionProgress
+    cancelRecording
   };
 };

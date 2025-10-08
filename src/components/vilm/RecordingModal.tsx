@@ -74,10 +74,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     cancelRecording,
     hasPermission,
     isCheckingPermission,
-    debugLog,
-    transcript,
-    isTranscribing,
-    transcriptionProgress
+    debugLog
   } = useAudioRecording();
 
   // Auto-save grace rule: save recording if app goes to background during finalize stage
@@ -110,8 +107,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     
     try {
       const defaultTitle = generateDefaultTitle();
-      // Pass the recording object and transcript (temporary file info) to be saved permanently
-      await onSave(defaultTitle, transcript, currentRecording.duration, currentRecording);
+      // Pass the recording object (temporary file info) to be saved permanently
+      await onSave(defaultTitle, '', currentRecording.duration, currentRecording);
     } catch (error) {
       console.error('Failed to auto-save recording:', error);
     }
@@ -149,8 +146,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     try {
       setIsSaving(true);
       await impact();
-      // Pass the recording object and transcript (temporary file info) to be saved permanently
-      await onSave(noteTitle, transcript, currentRecording.duration, currentRecording);
+      // Pass the recording object (temporary file info) to be saved permanently
+      await onSave(noteTitle, '', currentRecording.duration, currentRecording);
       setNoteTitle('');
       setStage('recording');
       onClose();
@@ -333,35 +330,6 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                    <p className="text-vilm-text-secondary text-sm">
                      Recording completed • {formatTime(currentRecording?.duration || 0)}
                    </p>
-                   
-                   {/* Transcription Status */}
-                   {isTranscribing && (
-                     <motion.div
-                       initial={{ opacity: 0, y: 10 }}
-                       animate={{ opacity: 1, y: 0 }}
-                       className="mt-4 p-3 bg-vilm-primary/5 border border-vilm-primary/20 rounded-lg text-left"
-                     >
-                       <div className="flex items-center gap-2 mb-2">
-                         <div className="w-2 h-2 bg-vilm-primary rounded-full animate-pulse" />
-                         <p className="text-xs font-medium text-vilm-primary">Transcribing...</p>
-                       </div>
-                       {transcriptionProgress && (
-                         <p className="text-sm text-vilm-text-primary">
-                           {transcriptionProgress}
-                         </p>
-                       )}
-                     </motion.div>
-                   )}
-                   
-                   {/* Final Transcript */}
-                   {!isTranscribing && transcript && (
-                     <div className="mt-4 p-3 bg-vilm-primary/5 border border-vilm-primary/20 rounded-lg text-left">
-                       <p className="text-xs font-medium text-vilm-primary mb-1">Transcript</p>
-                       <p className="text-sm text-vilm-text-primary">
-                         {transcript}
-                       </p>
-                     </div>
-                   )}
                  </div>
 
                 {/* Title Input */}
