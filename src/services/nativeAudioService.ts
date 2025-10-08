@@ -48,14 +48,11 @@ class NativeAudioService {
             } 
           });
 
-          // Prefer M4A format for maximum compatibility with all sharing platforms
-          let mimeType = 'audio/mp4;codecs=mp4a.40.2';
-          if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
-            mimeType = 'audio/mp4;codecs=mp4a.40.2';
-          } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            mimeType = 'audio/webm;codecs=opus';
-          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
-            mimeType = 'audio/webm';
+          // Use M4A format for maximum compatibility with all sharing platforms
+          const mimeType = 'audio/mp4;codecs=mp4a.40.2';
+          
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            throw new Error('M4A audio format is not supported on this device');
           }
 
           console.log('[Recording] MediaRecorder MIME type:', mimeType);
@@ -123,7 +120,7 @@ class NativeAudioService {
 
       this.mediaRecorder.onstop = async () => {
         try {
-          const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+          const mimeType = this.mediaRecorder?.mimeType || 'audio/mp4;codecs=mp4a.40.2';
           console.log('[Recording] Stopping recording with MIME type:', mimeType);
           const audioBlob = new Blob(this.audioChunks, { type: mimeType });
           
@@ -173,18 +170,10 @@ class NativeAudioService {
         directory: Directory.Data
       });
 
-      // Detect correct extension from blob MIME type
-      let extension = '.webm';
-      let mimeType = 'audio/webm';
-      if (tempRecording.blob) {
-        mimeType = tempRecording.blob.type;
-        console.log('[NativeAudio] Blob MIME type:', mimeType);
-        if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
-          extension = '.m4a';
-        } else if (mimeType.includes('webm')) {
-          extension = '.webm';
-        }
-      }
+      // Use M4A extension for all recordings
+      const extension = '.m4a';
+      const mimeType = tempRecording.blob?.type || 'audio/mp4';
+      console.log('[NativeAudio] Blob MIME type:', mimeType);
       
       console.log('[NativeAudio] Using extension:', extension);
       const permanentFilename = `${tempRecording.id}${extension}`;
@@ -261,11 +250,6 @@ class NativeAudioService {
         bytes[i] = binary.charCodeAt(i);
       }
 
-      // Check for WebM signature (EBML header: 0x1A 0x45 0xDF 0xA3)
-      if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
-        return 'audio/webm';
-      }
-
       // Check for MP4/M4A signature ('ftyp' at offset 4)
       if (bytes.length > 8 && 
           bytes[4] === 0x66 && bytes[5] === 0x74 && 
@@ -273,10 +257,10 @@ class NativeAudioService {
         return 'audio/mp4';
       }
 
-      // Fallback to webm
-      return 'audio/webm';
+      // All audio files should be M4A
+      return 'audio/mp4';
     } catch (error) {
-      return 'audio/webm';
+      return 'audio/mp4';
     }
   }
 
@@ -324,11 +308,9 @@ class NativeAudioService {
       const detectedMimeType = this.detectMimeType(result.data as string);
       
       // Also get extension-based MIME type for logging
-      let extensionMimeType = 'audio/webm';
-      if (filename.endsWith('.mp4')) {
+      let extensionMimeType = 'audio/mp4';
+      if (filename.endsWith('.mp4') || filename.endsWith('.m4a')) {
         extensionMimeType = 'audio/mp4';
-      } else if (filename.endsWith('.m4a')) {
-        extensionMimeType = 'audio/m4a';
       }
       
       console.log('[NativeAudio] Extension suggests:', extensionMimeType);
@@ -476,16 +458,8 @@ class NativeAudioService {
   }
 
   private generateTempAudioFilename(recordingId: string, mimeType?: string): string {
-    // Phase 3: Generate correct extension based on MIME type
-    let extension = 'webm';
-    if (mimeType) {
-      console.log('[Recording] Generating temp filename for MIME:', mimeType);
-      if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
-        extension = 'm4a';
-      } else if (mimeType.includes('webm')) {
-        extension = 'webm';
-      }
-    }
+    // Always use M4A extension
+    const extension = 'm4a';
     const filename = `temp_${recordingId}_${Date.now()}.${extension}`;
     console.log('[Recording] Generated temp filename:', filename);
     return filename;

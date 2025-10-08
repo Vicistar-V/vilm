@@ -67,12 +67,7 @@ class SharingService {
           
           const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
           
-          let extension = 'webm';
-          if (mimeType.includes('mp4')) {
-            extension = 'mp4';
-          } else if (mimeType.includes('m4a')) {
-            extension = 'm4a';
-          }
+          const extension = 'm4a';
           
           const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;
           console.log('[SharingService] Writing temp share file:', tempFileName);
