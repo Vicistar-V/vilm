@@ -159,6 +159,7 @@ export const useAudioRecording = () => {
     hasPermission,
     currentRecordingId,
     isCheckingPermission,
+    currentStream: nativeAudioService.getCurrentStream(),
     checkPermission,
     startRecording,
     stopRecording,

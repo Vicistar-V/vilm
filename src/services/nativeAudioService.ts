@@ -17,6 +17,7 @@ class NativeAudioService {
   private tempAudioDirectory = 'vilm-temp-audio';
   private audioDirectory = 'vilm-audio';
   private currentRecordingId: string | null = null;
+  private currentStream: MediaStream | null = null;
 
   async requestPermissions(): Promise<boolean> {
     try {
@@ -60,6 +61,7 @@ class NativeAudioService {
           this.mediaRecorder = new MediaRecorder(stream, { mimeType });
           this.audioChunks = [];
           this.currentRecordingId = uuidv4();
+          this.currentStream = stream;
 
           await this.ensureTempAudioDirectory();
 
@@ -135,6 +137,7 @@ class NativeAudioService {
           this.mediaRecorder = null;
           this.audioChunks = [];
           this.currentRecordingId = null;
+          this.currentStream = null;
 
           const recording: AudioRecording = {
             id: recordingId,
@@ -223,6 +226,10 @@ class NativeAudioService {
 
   isRecording(): boolean {
     return this.mediaRecorder?.state === 'recording';
+  }
+
+  getCurrentStream(): MediaStream | null {
+    return this.currentStream;
   }
 
   async getAudioFile(filename: string): Promise<string> {

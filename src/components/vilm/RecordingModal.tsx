@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { X, Square, Save, Trash2 } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
+import { useAudioAnalyzer } from '@/hooks/useAudioAnalyzer';
 import { AudioRecording } from '@/services/nativeAudioService';
 import { App } from '@capacitor/app';
 
@@ -35,23 +36,31 @@ const generateDefaultTitle = (): string => {
   return `Note from ${date} at ${time}`;
 };
 
-const WaveformVisualizer: React.FC<{ isRecording: boolean }> = ({ isRecording }) => {
+const WaveformVisualizer: React.FC<{ audioStream: MediaStream | null }> = ({ audioStream }) => {
+  const frequencyData = useAudioAnalyzer(audioStream);
+
   return (
     <div className="flex items-center justify-center space-x-1 h-16">
-      {[...Array(5)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="w-1 bg-vilm-recording rounded-full"
-          animate={{
-            height: isRecording ? [8, 32, 16, 40, 8] : [8],
-          }}
-          transition={{
-            duration: 0.8,
-            repeat: isRecording ? Infinity : 0,
-            delay: i * 0.1,
-          }}
-        />
-      ))}
+      {frequencyData.map((value, i) => {
+        // Normalize 0-255 to height range 8-48 pixels
+        const minHeight = 8;
+        const maxHeight = 48;
+        const normalizedHeight = minHeight + (value / 255) * (maxHeight - minHeight);
+        
+        return (
+          <motion.div
+            key={i}
+            className="w-1 bg-vilm-recording rounded-full"
+            animate={{
+              height: normalizedHeight
+            }}
+            transition={{
+              duration: 0.15,
+              ease: "easeOut"
+            }}
+          />
+        );
+      })}
     </div>
   );
 };
@@ -69,6 +78,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   const { 
     recordingState, 
     currentRecording, 
+    currentStream,
     startRecording, 
     stopRecording, 
     cancelRecording,
@@ -246,7 +256,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                       "bg-vilm-recording/10 border-4 border-vilm-recording"
                     )}
                   >
-                    <WaveformVisualizer isRecording={recordingState.isRecording} />
+                    <WaveformVisualizer audioStream={currentStream} />
                   </motion.div>
 
                   {/* Timer or Preparing Message */}
