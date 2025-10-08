@@ -284,19 +284,9 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
 
       {/* Bottom Actions */}
       <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-4 py-3 space-y-2">
+        <div className="px-4 py-3">
           {/* Share Menu */}
-          <ShareMenu vilm={currentVilm} />
-          
-          {/* Delete Action */}
-          <Button
-            onClick={handleDelete}
-            variant="destructive"
-            className="w-full"
-          >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Delete Vilm
-          </Button>
+          <ShareMenu vilm={currentVilm} onDelete={handleDelete} />
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Share2, FileText, Download, Copy, Music } from 'lucide-react';
+import { Share2, FileText, Download, Music, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Vilm } from '@/types/vilm';
@@ -7,14 +7,14 @@ import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
 import { ImpactStyle } from '@capacitor/haptics';
-import { Clipboard } from '@capacitor/clipboard';
 
 interface ShareMenuProps {
   vilm: Vilm;
   onClose?: () => void;
+  onDelete?: (vilm: Vilm) => void;
 }
 
-export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
+export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete }) => {
   const { toast } = useToast();
   const { impact } = useHaptics();
   const [isSharing, setIsSharing] = useState(false);
@@ -172,43 +172,6 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
     }
   };
 
-  const handleCopyTranscript = async () => {
-    if (isSharing) return;
-    
-    try {
-      setIsSharing(true);
-      await impact(ImpactStyle.Light);
-      
-      if (!vilm.transcript || vilm.transcript.trim() === '') {
-        toast({
-          title: "No Transcript",
-          description: "Transcript is not available yet",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      await Clipboard.write({
-        string: vilm.transcript
-      });
-      
-      toast({
-        title: "Copied",
-        description: "Transcript copied to clipboard"
-      });
-      
-      onClose?.();
-    } catch (error) {
-      toast({
-        title: "Copy Failed",
-        description: "Unable to copy transcript",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
   const handleExportText = async () => {
     if (isSharing) return;
     
@@ -290,16 +253,6 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
         {/* Secondary Actions */}
         <div className="flex gap-2">
           <Button
-            onClick={handleCopyTranscript}
-            disabled={isSharing || !vilm.transcript?.trim()}
-            className="flex-1 h-11 gap-2 hover:bg-muted/50 transition-all duration-200"
-            variant="ghost"
-          >
-            <Copy className="w-4 h-4" />
-            <span className="text-sm">Copy</span>
-          </Button>
-          
-          <Button
             onClick={handleExportText}
             disabled={isSharing}
             className="flex-1 h-11 gap-2 hover:bg-muted/50 transition-all duration-200"
@@ -307,6 +260,19 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
           >
             <Download className="w-4 h-4" />
             <span className="text-sm">Download</span>
+          </Button>
+          
+          <Button
+            onClick={async () => {
+              await impact(ImpactStyle.Medium);
+              onDelete?.(vilm);
+            }}
+            disabled={isSharing}
+            className="flex-1 h-11 gap-2 hover:bg-destructive/10 text-destructive hover:text-destructive transition-all duration-200"
+            variant="ghost"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="text-sm">Delete</span>
           </Button>
         </div>
       </div>
