@@ -12,7 +12,7 @@ export const useStatusBar = () => {
       try {
         if (currentTheme === 'dark') {
           await StatusBar.setStyle({ style: Style.Dark });
-          await StatusBar.setBackgroundColor({ color: '#1C1C1E' });
+          await StatusBar.setBackgroundColor({ color: '#1C1C1C' });
         } else {
           await StatusBar.setStyle({ style: Style.Light });
           await StatusBar.setBackgroundColor({ color: '#F8F8F8' });
@@ -28,7 +28,7 @@ export const useStatusBar = () => {
   const setDarkStatusBar = async () => {
     try {
       await StatusBar.setStyle({ style: Style.Dark });
-      await StatusBar.setBackgroundColor({ color: '#1C1C1E' });
+      await StatusBar.setBackgroundColor({ color: '#1C1C1C' });
     } catch (error) {
       console.log('StatusBar not available');
     }
