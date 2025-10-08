@@ -236,64 +236,79 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
   };
 
   return (
-    <Card className="p-4 space-y-3">
-      <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-        <Share2 className="w-4 h-4" />
-        Share Options
-      </h3>
-      
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          onClick={handleShareAll}
-          disabled={isSharing}
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-        >
-          <Share2 className="w-4 h-4" />
-          <span className="text-xs">Share All</span>
-        </Button>
-        
-        <Button
-          onClick={handleShareTranscript}
-          disabled={isSharing || !vilm.transcript?.trim()}
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-        >
-          <FileText className="w-4 h-4" />
-          <span className="text-xs">Transcript</span>
-        </Button>
-        
-        <Button
-          onClick={handleShareAudio}
-          disabled={isSharing || !vilm.audioFilename}
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-        >
-          <Music className="w-4 h-4" />
-          <span className="text-xs">Audio</span>
-        </Button>
-        
-        <Button
-          onClick={handleCopyTranscript}
-          disabled={isSharing || !vilm.transcript?.trim()}
-          variant="outline"
-          className="flex flex-col items-center gap-2 h-auto py-3"
-        >
-          <Copy className="w-4 h-4" />
-          <span className="text-xs">Copy</span>
-        </Button>
-      </div>
-      
-      <div className="pt-2 border-t">
-        <Button
-          onClick={handleExportText}
-          disabled={isSharing}
-          variant="ghost"
-          className="w-full flex items-center gap-2"
-        >
-          <Download className="w-4 h-4" />
-          Export as Text File
-        </Button>
+    <Card className="border-0 bg-muted/30 backdrop-blur-sm">
+      <div className="p-6 space-y-6">
+        {/* Primary Actions */}
+        <div className="space-y-3">
+          <Button
+            onClick={handleShareAll}
+            disabled={isSharing}
+            className="w-full h-12 justify-start gap-3 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-all duration-200 hover:scale-[1.02]"
+            variant="ghost"
+          >
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+              <Share2 className="w-4 h-4" />
+            </div>
+            <span className="font-medium">Share Everything</span>
+          </Button>
+          
+          <Button
+            onClick={handleShareTranscript}
+            disabled={isSharing || !vilm.transcript?.trim()}
+            className="w-full h-12 justify-start gap-3 hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02]"
+            variant="ghost"
+          >
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+              <FileText className="w-4 h-4" />
+            </div>
+            <span className="font-medium">Share Transcript</span>
+          </Button>
+          
+          <Button
+            onClick={handleShareAudio}
+            disabled={isSharing || !vilm.audioFilename}
+            className="w-full h-12 justify-start gap-3 hover:bg-muted/50 transition-all duration-200 hover:scale-[1.02]"
+            variant="ghost"
+          >
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+              <Music className="w-4 h-4" />
+            </div>
+            <span className="font-medium">Share Audio</span>
+          </Button>
+        </div>
+
+        {/* Divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border/50"></div>
+          </div>
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card px-3 text-muted-foreground">Quick Actions</span>
+          </div>
+        </div>
+
+        {/* Secondary Actions */}
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCopyTranscript}
+            disabled={isSharing || !vilm.transcript?.trim()}
+            className="flex-1 h-11 gap-2 hover:bg-muted/50 transition-all duration-200"
+            variant="ghost"
+          >
+            <Copy className="w-4 h-4" />
+            <span className="text-sm">Copy</span>
+          </Button>
+          
+          <Button
+            onClick={handleExportText}
+            disabled={isSharing}
+            className="flex-1 h-11 gap-2 hover:bg-muted/50 transition-all duration-200"
+            variant="ghost"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm">Export</span>
+          </Button>
+        </div>
       </div>
     </Card>
   );
