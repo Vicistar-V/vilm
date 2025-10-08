@@ -58,9 +58,14 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
         const audio = new Audio(url);
         audioRef.current = audio;
         
-        audio.addEventListener('loadedmetadata', () => {
-          setAudioDuration(audio.duration);
-        });
+        const setDur = () => {
+          if (Number.isFinite(audio.duration) && audio.duration > 0) {
+            setAudioDuration(audio.duration);
+          }
+        };
+        audio.addEventListener('loadedmetadata', setDur);
+        audio.addEventListener('durationchange', setDur);
+        audio.addEventListener('canplay', setDur);
         
         audio.addEventListener('timeupdate', () => {
           if (!isDragging) {
@@ -108,12 +113,17 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
 
   const seekToPosition = (clientX: number) => {
     if (!progressRef.current || !audioRef.current) return;
-    
+
     const rect = progressRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, x / rect.width));
-    const newTime = percentage * (audioRef.current.duration || audioDuration);
-    
+
+    const rawDuration = Number.isFinite(audioRef.current.duration) && audioRef.current.duration > 0
+      ? audioRef.current.duration
+      : (Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : null);
+    if (!rawDuration) return;
+
+    const newTime = percentage * rawDuration;
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
   };
@@ -152,7 +162,10 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
     }
   };
 
-  const progress = audioDuration > 0 ? (currentTime / audioDuration) * 100 : 0;
+  const effectiveDuration = (audioRef.current && Number.isFinite(audioRef.current.duration) && audioRef.current.duration > 0)
+    ? audioRef.current.duration
+    : (Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : 0);
+  const progress = effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0;
   
   return (
     <Card 
