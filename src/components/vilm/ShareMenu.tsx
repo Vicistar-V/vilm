@@ -41,8 +41,14 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unable to share Vilm';
       
-      // Phase 4: Categorize errors and provide specific feedback
-      let errorCategory = 'Unknown Error';
+      // Don't show error for user cancellation
+      if (errorMsg.toLowerCase().includes('cancel')) {
+        console.log('[ShareMenu] Share was canceled by user');
+        return;
+      }
+      
+      // Categorize errors and provide specific feedback
+      let errorCategory = 'Share Failed';
       let userFriendlyMsg = errorMsg;
       
       if (errorMsg.toLowerCase().includes('not found')) {
@@ -50,19 +56,19 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
         userFriendlyMsg = 'The audio file could not be found in storage';
       } else if (errorMsg.toLowerCase().includes('permission')) {
         errorCategory = 'Permission Denied';
-        userFriendlyMsg = 'Storage permission was denied';
+        userFriendlyMsg = 'Storage or sharing permission was denied';
       } else if (errorMsg.toLowerCase().includes('format') || errorMsg.toLowerCase().includes('mime')) {
         errorCategory = 'Format Issue';
-        userFriendlyMsg = 'Audio format is incompatible for sharing';
+        userFriendlyMsg = 'Some apps may not support this audio format. Try sharing transcript only.';
       } else if (errorMsg.toLowerCase().includes('audio')) {
         errorCategory = 'Audio Error';
+        userFriendlyMsg = 'Unable to prepare audio for sharing';
       }
       
       console.error('[ShareMenu] Share All failed:', errorCategory, errorMsg);
       
-      // Show error with category
       toast({
-        title: `Share Failed: ${errorCategory}`,
+        title: errorCategory,
         description: userFriendlyMsg,
         variant: "destructive"
       });
@@ -133,8 +139,14 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unable to share audio';
       
-      // Phase 4: Categorize audio-specific errors
-      let errorCategory = 'Audio Error';
+      // Don't show error for user cancellation
+      if (errorMsg.toLowerCase().includes('cancel')) {
+        console.log('[ShareMenu] Share was canceled by user');
+        return;
+      }
+      
+      // Categorize audio-specific errors
+      let errorCategory = 'Share Failed';
       let userFriendlyMsg = errorMsg;
       
       if (errorMsg.toLowerCase().includes('not found')) {
@@ -145,13 +157,13 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose }) => {
         userFriendlyMsg = 'The audio file appears to be corrupted';
       } else if (errorMsg.toLowerCase().includes('format')) {
         errorCategory = 'Format Issue';
-        userFriendlyMsg = 'Audio format is not compatible';
+        userFriendlyMsg = 'Some apps may not support this audio format. The audio will be saved in M4A format going forward.';
       }
       
       console.error('[ShareMenu] Share Audio failed:', errorCategory, errorMsg);
       
       toast({
-        title: `Share Failed: ${errorCategory}`,
+        title: errorCategory,
         description: userFriendlyMsg,
         variant: "destructive"
       });

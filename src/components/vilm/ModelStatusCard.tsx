@@ -4,17 +4,31 @@ import { browserTranscriptionService } from '@/services/browserTranscriptionServ
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useHaptics } from '@/hooks/useHaptics';
+import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 
 export const ModelStatusCard: React.FC = () => {
   const [cacheStatus, setCacheStatus] = useState<{ isCached: boolean; estimatedSize?: number }>({
     isCached: false
   });
   const [isClearing, setIsClearing] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const { toast } = useToast();
   const { impact } = useHaptics();
+  const { isDownloading } = useTranscriptionEngine();
 
   useEffect(() => {
     loadCacheStatus();
+    
+    // Subscribe to download progress
+    const progressListener = (progress: number) => {
+      setDownloadProgress(progress);
+    };
+    
+    browserTranscriptionService.subscribeProgress(progressListener);
+    
+    return () => {
+      browserTranscriptionService.unsubscribeProgress(progressListener);
+    };
   }, []);
 
   const loadCacheStatus = async () => {
@@ -95,7 +109,12 @@ export const ModelStatusCard: React.FC = () => {
         <div className="flex items-center justify-between">
           <span className="text-sm text-vilm-text-secondary">Model Status</span>
           <div className="flex items-center gap-2">
-            {cacheStatus.isCached ? (
+            {isDownloading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-vilm-primary" />
+                <span className="text-sm font-medium text-vilm-primary">Downloading... {downloadProgress}%</span>
+              </>
+            ) : cacheStatus.isCached ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-vilm-success" />
                 <span className="text-sm font-medium text-vilm-success">Downloaded</span>
@@ -108,6 +127,18 @@ export const ModelStatusCard: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Download Progress Bar */}
+        {isDownloading && (
+          <div className="w-full">
+            <div className="h-2 bg-vilm-surface-dark rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-vilm-primary transition-all duration-300"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Storage Size */}
         {cacheStatus.estimatedSize !== undefined && (

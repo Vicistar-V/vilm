@@ -100,19 +100,61 @@ class SharingService {
         }
       }
 
-      const shareResult = await Share.share(shareData);
+      // Try to share with both text and files
+      try {
+        await Share.share(shareData);
+        
+        if (shareData.files) {
+          setTimeout(() => this.cleanupTempShareFiles(), 5000);
+        }
+      } catch (shareError) {
+        // If sharing with both text and files failed, try fallback strategy
+        if (includeAudio && includeTranscript && shareData.files) {
+          console.log('[SharingService] Share with both failed, trying fallback with text file...');
+          
+          // Fallback: Create a text file and share both files
+          try {
+            const textFileName = `vilm_transcript_${vilm.id}_${Date.now()}.txt`;
+            await Filesystem.writeFile({
+              path: `temp_share/${textFileName}`,
+              data: shareData.text || '',
+              directory: Directory.Cache,
+              encoding: Encoding.UTF8
+            });
 
-      if (shareData.files) {
-        setTimeout(() => this.cleanupTempShareFiles(), 5000);
+            const textFileUri = await Filesystem.getUri({
+              directory: Directory.Cache,
+              path: `temp_share/${textFileName}`
+            });
+
+            // Share both files
+            await Share.share({
+              title: shareData.title,
+              files: [shareData.files[0], textFileUri.uri]
+            });
+
+            setTimeout(() => this.cleanupTempShareFiles(), 5000);
+            return;
+          } catch (fallbackError) {
+            console.error('[SharingService] Fallback share failed:', fallbackError);
+          }
+        }
+        
+        // If all attempts failed, throw the original error
+        throw shareError;
       }
 
     } catch (error) {
-      if (error.message?.includes('NotAllowedError')) {
+      const errorMsg = error.message || String(error);
+      
+      if (errorMsg.includes('Share canceled')) {
+        throw new Error('Share canceled');
+      } else if (errorMsg.includes('NotAllowedError')) {
         throw new Error('Sharing not allowed. Check app permissions.');
-      } else if (error.message?.includes('AbortError')) {
+      } else if (errorMsg.includes('AbortError')) {
         throw new Error('Sharing was cancelled.');
       } else {
-        throw new Error(`Failed to share Vilm: ${error.message || 'Unknown error'}`);
+        throw new Error(`Failed to share Vilm: ${errorMsg}`);
       }
     }
   }

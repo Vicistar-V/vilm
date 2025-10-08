@@ -48,14 +48,14 @@ class NativeAudioService {
             } 
           });
 
-          // Prefer WebM format for consistency
-          let mimeType = 'audio/webm;codecs=opus';
-          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          // Prefer M4A format for maximum compatibility with all sharing platforms
+          let mimeType = 'audio/mp4;codecs=mp4a.40.2';
+          if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
+            mimeType = 'audio/mp4;codecs=mp4a.40.2';
+          } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
             mimeType = 'audio/webm;codecs=opus';
           } else if (MediaRecorder.isTypeSupported('audio/webm')) {
             mimeType = 'audio/webm';
-          } else if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
-            mimeType = 'audio/mp4;codecs=mp4a.40.2';
           }
 
           console.log('[Recording] MediaRecorder MIME type:', mimeType);

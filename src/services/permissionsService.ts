@@ -46,18 +46,38 @@ class PermissionsService {
 
   private async checkMicrophonePermission(): Promise<boolean> {
     try {
-      // Try to query permission state
-      if ('permissions' in navigator) {
-        const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        console.log('Microphone permission state:', result.state);
-        return result.state === 'granted';
+      // Try to query permission state using Permissions API
+      if ('permissions' in navigator && 'query' in navigator.permissions) {
+        try {
+          const result = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+          console.log('Microphone permission state:', result.state);
+          
+          // Listen for permission changes
+          result.onchange = () => {
+            console.log('Microphone permission changed to:', result.state);
+            this.permissionStatus.microphone = result.state === 'granted';
+          };
+          
+          return result.state === 'granted';
+        } catch (queryError) {
+          // Permissions API query failed, fall through to manual check
+          console.warn('Permissions.query failed, trying manual check:', queryError);
+        }
       }
       
-      // Fallback: assume we need to request
-      return false;
+      // Fallback: Try to get user media (will prompt if not decided)
+      // This is a more aggressive check but necessary on some platforms
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        return true;
+      } catch (mediaError) {
+        // Permission denied or not available
+        console.warn('getUserMedia check failed:', mediaError);
+        return false;
+      }
     } catch (error) {
-      // Permission API not available or query failed
-      console.warn('Could not query microphone permission:', error);
+      console.error('Failed to check microphone permission:', error);
       return false;
     }
   }

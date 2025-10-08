@@ -10,12 +10,15 @@ export interface TranscriptionResult {
 export type TranscriptionPhase = 'idle' | 'downloading' | 'ready' | 'error';
 
 type PhaseListener = (phase: TranscriptionPhase) => void;
+type ProgressListener = (progress: number) => void;
 
 class BrowserTranscriptionService {
   private transcriber: any = null;
   private isInitializing = false;
   private phase: TranscriptionPhase = 'idle';
   private listeners = new Set<PhaseListener>();
+  private progressListeners = new Set<ProgressListener>();
+  private downloadProgress: number = 0;
   private currentTaskId: string | null = null;
   private cancelledTaskIds = new Set<string>();
 
@@ -31,9 +34,30 @@ class BrowserTranscriptionService {
     this.listeners.delete(listener);
   }
 
+  subscribeProgress(listener: ProgressListener): void {
+    this.progressListeners.add(listener);
+  }
+
+  unsubscribeProgress(listener: ProgressListener): void {
+    this.progressListeners.delete(listener);
+  }
+
+  getDownloadProgress(): number {
+    return this.downloadProgress;
+  }
+
+  isDownloading(): boolean {
+    return this.phase === 'downloading';
+  }
+
   private setPhase(phase: TranscriptionPhase): void {
     this.phase = phase;
     this.listeners.forEach(listener => listener(phase));
+  }
+
+  private setProgress(progress: number): void {
+    this.downloadProgress = progress;
+    this.progressListeners.forEach(listener => listener(progress));
   }
 
   async initialize(): Promise<void> {
@@ -77,7 +101,14 @@ class BrowserTranscriptionService {
         { 
           device,
           cache_dir: 'whisper-models', // Store in IndexedDB for persistence
-          local_files_only: false // Allow download on first run
+          local_files_only: false, // Allow download on first run
+          progress_callback: (progress: any) => {
+            // Track download progress
+            if (progress.status === 'downloading' || progress.status === 'progress') {
+              const percent = progress.progress ? Math.round(progress.progress * 100) : 0;
+              this.setProgress(percent);
+            }
+          }
         }
       );
       
@@ -179,10 +210,14 @@ class BrowserTranscriptionService {
 
   private async checkModelCache(): Promise<boolean> {
     try {
-      // Check if model is cached in IndexedDB
-      const cacheKey = 'whisper-models';
-      const caches = await window.caches.keys();
-      return cacheKey && caches.some(key => key.includes(cacheKey));
+      // Check if model is cached in IndexedDB (transformers.js uses IndexedDB for model storage)
+      const databases = await indexedDB.databases();
+      const hasCache = databases.some(db => 
+        db.name?.includes('transformers') || 
+        db.name?.includes('whisper') ||
+        db.name?.includes('onnx')
+      );
+      return hasCache;
     } catch {
       return false;
     }
