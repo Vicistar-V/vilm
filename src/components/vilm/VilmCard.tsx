@@ -7,6 +7,7 @@ import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 import { useHaptics } from '@/hooks/useHaptics';
 import { nativeAudioService } from '@/services/nativeAudioService';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 
 interface VilmCardProps {
   vilm: Vilm;
@@ -17,6 +18,16 @@ const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const formatReadableDate = (date: Date): string => {
+  if (isToday(date)) {
+    return `Today at ${format(date, 'h:mm a')}`;
+  } else if (isYesterday(date)) {
+    return `Yesterday at ${format(date, 'h:mm a')}`;
+  } else {
+    return format(date, 'MMM d, yyyy');
+  }
 };
 
 export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
@@ -137,23 +148,15 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0 mr-3">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-foreground truncate">
-                {vilm.title}
-              </h3>
-              <TranscriptionStatus 
-                transcript={vilm.transcript}
-                transcriptionStatus={vilm.transcriptionStatus}
-                transcriptionError={vilm.transcriptionError}
-                className="flex-shrink-0"
-              />
-            </div>
+            <h3 className="font-semibold text-foreground truncate mb-1">
+              {vilm.title}
+            </h3>
             
             {vilm.transcriptionStatus === 'processing' ? (
               <div className="mb-1">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground italic">
                     {isSettingUp ? 'Setting up transcription (first time only)...' : 'Transcribing...'}
                   </span>
                 </div>
@@ -163,9 +166,14 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
                 Transcription failed - tap to retry
               </p>
             ) : hasTranscript ? (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
-                {vilm.transcript}
-              </p>
+              <>
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-1">
+                  {vilm.transcript}
+                </p>
+                <p className="text-xs text-muted-foreground/60 italic mb-1">
+                  Transcribed
+                </p>
+              </>
             ) : (
               <p className="text-sm text-muted-foreground/70 italic mb-1">
                 No transcript available
@@ -176,7 +184,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
               <Clock className="w-3 h-3" />
               <span>{formatDuration(vilm.duration)}</span>
               <span>•</span>
-              <span>{vilm.createdAt.toLocaleDateString()}</span>
+              <span>{formatReadableDate(vilm.createdAt)}</span>
             </div>
           </div>
         </div>
