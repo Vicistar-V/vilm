@@ -110,7 +110,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="flex items-center p-4 bg-background border-b">
+      <header className="flex items-center px-4 pb-4 pt-safe-top bg-background border-b">
         <Button
           variant="ghost"
           size="sm"
