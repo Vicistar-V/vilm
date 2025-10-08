@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Share, Trash2, FileText, Copy, Download } from 'lucide-react';
+import { ArrowLeft, Share, Trash2, FileText, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AudioPlayer } from '@/components/vilm/AudioPlayer';
@@ -11,7 +11,6 @@ import { sharingService } from '@/services/sharingService';
 import { useToast } from '@/hooks/use-toast';
 import { ImpactStyle } from '@capacitor/haptics';
 import { Clipboard } from '@capacitor/clipboard';
-import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 
 interface DetailViewProps {
   vilm: Vilm;
@@ -24,8 +23,6 @@ interface DetailViewProps {
 export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, onDelete, onRetryTranscription }) => {
   const { impact, selection } = useHaptics();
   const { toast } = useToast();
-  const { phase } = useTranscriptionEngine();
-  const isDownloadingModel = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
 
   const handleBack = async () => {
     await impact(ImpactStyle.Light);
@@ -162,29 +159,14 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
               </div>
               
               {vilm.transcriptionStatus === 'processing' ? (
-                <div className="p-8 bg-primary/10 rounded-lg border-2 border-primary/30 text-center">
-                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 relative">
-                    <div className="absolute inset-0 rounded-full border-4 border-primary/30 border-t-primary animate-spin"></div>
-                    {isDownloadingModel ? (
-                      <Download className="w-8 h-8 text-primary" />
-                    ) : (
-                      <FileText className="w-8 h-8 text-primary" />
-                    )}
+                <div className="p-6 text-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3 relative">
+                    <div className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary animate-spin"></div>
+                    <FileText className="w-5 h-5 text-primary" />
                   </div>
-                  <p className="text-primary font-semibold text-lg mb-2">
-                    {isDownloadingModel ? 'Downloading Whisper Model' : 'Transcribing Audio'}
+                  <p className="text-muted-foreground text-sm">
+                    Processing your recording...
                   </p>
-                  <p className="text-primary/70 text-sm mb-4">
-                    {isDownloadingModel 
-                      ? 'First-time setup - downloading AI model (~40MB)...'
-                      : 'Please wait while we process your recording...'
-                    }
-                  </p>
-                  <div className="space-y-2 max-w-md mx-auto">
-                    <div className="h-3 bg-primary/30 animate-pulse rounded w-full"></div>
-                    <div className="h-3 bg-primary/30 animate-pulse rounded w-5/6 mx-auto"></div>
-                    <div className="h-3 bg-primary/30 animate-pulse rounded w-4/6 mx-auto"></div>
-                  </div>
                 </div>
               ) : vilm.transcriptionError ? (
                 <div className="p-6 bg-destructive/10 rounded-lg border border-destructive/20 text-center">

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Card } from "@/components/ui/card";
-import { Play, Clock, Download } from "lucide-react";
+import { Play, Clock } from "lucide-react";
 import { Vilm } from "@/types/vilm";
 import { TranscriptionStatus } from "@/components/vilm/TranscriptionStatus";
-import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 
 interface VilmCardProps {
   vilm: Vilm;
@@ -17,8 +16,6 @@ const formatDuration = (seconds: number): string => {
 };
 
 export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
-  const { phase } = useTranscriptionEngine();
-  const isDownloadingModel = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
   const hasTranscript = vilm.transcript && vilm.transcript.trim() !== '';
   
   return (
@@ -41,24 +38,10 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
           </div>
           
           {vilm.transcriptionStatus === 'processing' ? (
-            <div className="mb-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                {isDownloadingModel ? (
-                  <>
-                    <Download className="w-3.5 h-3.5 text-primary animate-pulse" />
-                    <span className="text-sm font-medium text-primary">Downloading Whisper model (first run)...</span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-primary">Transcribing audio...</span>
-                  </>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <div className="h-2 bg-primary/30 animate-pulse rounded w-full"></div>
-                <div className="h-2 bg-primary/30 animate-pulse rounded w-5/6"></div>
-                <div className="h-2 bg-primary/30 animate-pulse rounded w-4/6"></div>
+            <div className="mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>
+                <span className="text-sm text-muted-foreground">Processing...</span>
               </div>
             </div>
           ) : vilm.transcriptionError ? (
