@@ -46,6 +46,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const wasPlayingBeforeDragRef = useRef(false);
 
   // Load audio
   useEffect(() => {
@@ -165,13 +166,51 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
   const handleProgressClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    if (isDragging) return;
     seekToPosition(e.clientX);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!audioRef.current) return;
+
+    wasPlayingBeforeDragRef.current = isPlaying;
+    setIsDragging(true);
+    audioRef.current.pause();
+    setIsPlaying(false);
+    seekToPosition(e.clientX);
+
+    const onMove = (ev: MouseEvent) => {
+      seekToPosition(ev.clientX);
+    };
+    const onUp = async () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      setIsDragging(false);
+      if (audioRef.current && wasPlayingBeforeDragRef.current) {
+        try {
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch (err) {
+          console.error('Failed to resume after drag:', err);
+        }
+      }
+      wasPlayingBeforeDragRef.current = false;
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    if (!audioRef.current) return;
+    wasPlayingBeforeDragRef.current = isPlaying;
     setIsDragging(true);
+    audioRef.current.pause();
+    setIsPlaying(false);
     seekToPosition(e.touches[0].clientX);
   };
 
@@ -182,10 +221,19 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
     seekToPosition(e.touches[0].clientX);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = async (e: React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
     setIsDragging(false);
+    if (audioRef.current && wasPlayingBeforeDragRef.current) {
+      try {
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (err) {
+        console.error('Failed to resume after drag:', err);
+      }
+    }
+    wasPlayingBeforeDragRef.current = false;
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -295,6 +343,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
               ref={progressRef}
               className="flex-1 relative h-8 flex items-center cursor-pointer"
               onClick={handleProgressClick}
+              onMouseDown={handleMouseDown}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
