@@ -42,9 +42,27 @@ const AppContent = () => {
     } else if (launchData.requirePermission) {
       setShowPermissionPrompt(true);
       clearLaunchData();
-    } else if (launchData.openFinalizeModal && launchData.audioPath) {
-      setWidgetAudioPath(launchData.audioPath);
-      clearLaunchData();
+    } else if (launchData.openFinalizeModal) {
+      if (launchData.audioPath) {
+        setWidgetAudioPath(launchData.audioPath);
+        clearLaunchData();
+      } else {
+        // Retry once if modal requested but no audio path
+        console.warn('⚠️ Widget requested finalize modal but no audioPath, retrying in 1s...');
+        setTimeout(async () => {
+          try {
+            const { VilmWidget } = await import('./plugins/VilmWidgetPlugin');
+            const retryData = await VilmWidget.checkWidgetLaunch();
+            console.log('Retry result:', retryData);
+            if (retryData.audioPath) {
+              setWidgetAudioPath(retryData.audioPath);
+            }
+          } catch (error) {
+            console.error('Failed to retry widget launch check:', error);
+          }
+          clearLaunchData();
+        }, 1000);
+      }
     }
   }, [launchData, clearLaunchData]);
 
