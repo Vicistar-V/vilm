@@ -32,6 +32,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const progressRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const wasPlayingBeforeDragRef = useRef(false);
   const { impact } = useHaptics();
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -58,11 +60,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           setIsLoading(false);
         });
         
-        audio.addEventListener('timeupdate', () => {
-          if (!isDragging) {
-            setCurrentTime(audio.currentTime);
-          }
-        });
+        const handlePlaying = () => {
+          setIsPlaying(true);
+          console.log('Audio actually playing - timer started');
+        };
+        
+        audio.addEventListener('playing', handlePlaying);
         
         audio.addEventListener('ended', () => {
           setIsPlaying(false);
@@ -91,8 +94,32 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     };
   }, [audioFilename, isDragging]);
+
+  // Animation frame loop for smooth progress updates
+  useEffect(() => {
+    if (isPlaying && audioRef.current && !isDragging) {
+      const updateProgress = () => {
+        if (audioRef.current && !isDragging) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+        if (isPlaying && !isDragging) {
+          animationFrameRef.current = requestAnimationFrame(updateProgress);
+        }
+      };
+      animationFrameRef.current = requestAnimationFrame(updateProgress);
+      
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+        }
+      };
+    }
+  }, [isPlaying, isDragging]);
 
   const handlePlayPause = async () => {
     if (!audioRef.current || isLoading) return;
@@ -104,8 +131,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
+        // Don't set isPlaying here - wait for 'playing' event
         await audioRef.current.play();
-        setIsPlaying(true);
+        console.log('Play requested - waiting for playing event');
       }
     } catch (err) {
       console.error('Playback error:', err);
@@ -126,6 +154,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleTouchStart = () => {
+    if (!audioRef.current) return;
+    wasPlayingBeforeDragRef.current = isPlaying;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
     setIsDragging(true);
   };
 
@@ -142,8 +176,53 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     setCurrentTime(clampedTime);
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = async () => {
     setIsDragging(false);
+    if (audioRef.current && wasPlayingBeforeDragRef.current) {
+      try {
+        // Don't set isPlaying here - wait for 'playing' event
+        await audioRef.current.play();
+      } catch (err) {
+        console.error('Failed to resume after drag:', err);
+      }
+    }
+    wasPlayingBeforeDragRef.current = false;
+  };
+
+  const handleMouseDown = () => {
+    if (!audioRef.current) return;
+    wasPlayingBeforeDragRef.current = isPlaying;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!progressRef.current || !audioRef.current || !isDragging) return;
+    
+    const rect = progressRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const percentage = mouseX / rect.width;
+    const newTime = percentage * duration;
+    
+    const clampedTime = Math.max(0, Math.min(newTime, duration));
+    audioRef.current.currentTime = clampedTime;
+    setCurrentTime(clampedTime);
+  };
+
+  const handleMouseUp = async () => {
+    setIsDragging(false);
+    if (audioRef.current && wasPlayingBeforeDragRef.current) {
+      try {
+        // Don't set isPlaying here - wait for 'playing' event
+        await audioRef.current.play();
+      } catch (err) {
+        console.error('Failed to resume after drag:', err);
+      }
+    }
+    wasPlayingBeforeDragRef.current = false;
   };
 
   if (error) {
@@ -190,6 +269,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
             className="relative w-full h-8 flex items-center cursor-pointer"
           >
             {/* Background Track */}
