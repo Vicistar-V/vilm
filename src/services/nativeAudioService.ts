@@ -41,12 +41,14 @@ class NativeAudioService {
       });
       debugLogger.success('Audio', `Microphone access granted - Stream: ${stream.id}`);
 
-      // Use AAC codec for better mobile compatibility (closer to m4a)
+      // Prefer WebM format for consistency
       let mimeType = 'audio/webm;codecs=opus';
-      if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
-        mimeType = 'audio/mp4;codecs=mp4a.40.2'; // AAC in MP4
-      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
         mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2')) {
+        mimeType = 'audio/mp4;codecs=mp4a.40.2';
       }
       debugLogger.info('Audio', `Using codec: ${mimeType}`);
 
@@ -319,7 +321,8 @@ class NativeAudioService {
         recursive: true
       });
     } catch (error) {
-      if (!error.message?.includes('Directory exists')) {
+      const errorMsg = error.message?.toLowerCase() || '';
+      if (!errorMsg.includes('exist')) {
         throw error;
       }
     }
@@ -333,7 +336,8 @@ class NativeAudioService {
         recursive: true
       });
     } catch (error) {
-      if (!error.message?.includes('Directory exists')) {
+      const errorMsg = error.message?.toLowerCase() || '';
+      if (!errorMsg.includes('exist')) {
         throw error;
       }
     }
