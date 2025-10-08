@@ -56,7 +56,7 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ onPermission
             )}>
               <Mic className="w-10 h-10 text-primary-foreground" />
             </div>
-            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+            <div className="absolute inset-0 bg-primary/20 rounded-full" />
           </div>
         </div>
 
