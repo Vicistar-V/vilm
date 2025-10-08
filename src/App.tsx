@@ -14,16 +14,34 @@ import { useVilmStorage } from './hooks/useVilmStorage';
 import { sharingService } from './services/sharingService';
 import { App as CapacitorApp } from '@capacitor/app';
 import { browserTranscriptionService } from '@/services/browserTranscriptionService';
+import { useWidgetLaunch } from './hooks/useWidgetLaunch';
+import { PermissionPrompt } from './components/vilm/PermissionPrompt';
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
   const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const [widgetAudioPath, setWidgetAudioPath] = useState<string | null>(null);
   
   useStatusBar();
   const { notification } = useHaptics();
   const { vilms, deleteVilm, retryTranscription } = useVilmStorage();
+  const { launchData, clearLaunchData } = useWidgetLaunch();
+
+  // Handle widget launches
+  useEffect(() => {
+    if (!launchData) return;
+
+    if (launchData.requirePermission) {
+      setShowPermissionPrompt(true);
+      clearLaunchData();
+    } else if (launchData.openFinalizeModal && launchData.audioPath) {
+      setWidgetAudioPath(launchData.audioPath);
+      clearLaunchData();
+    }
+  }, [launchData, clearLaunchData]);
 
   // Silently initialize model in background on app startup
   useEffect(() => {
@@ -114,10 +132,22 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen-safe bg-background">
+      {showPermissionPrompt && (
+        <PermissionPrompt 
+          onClose={() => setShowPermissionPrompt(false)}
+          onPermissionGranted={() => {
+            setShowPermissionPrompt(false);
+            notification('success');
+          }}
+        />
+      )}
+
       {currentView === 'feed' && (
         <MainFeed 
           onVilmClick={handleVilmClick} 
           onSettingsClick={handleSettingsClick}
+          widgetAudioPath={widgetAudioPath}
+          onWidgetAudioProcessed={() => setWidgetAudioPath(null)}
         />
       )}
       

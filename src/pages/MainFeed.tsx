@@ -17,16 +17,27 @@ import { permissionsService } from '@/services/permissionsService';
 interface MainFeedProps {
   onVilmClick: (vilm: Vilm) => void;
   onSettingsClick: () => void;
+  widgetAudioPath?: string | null;
+  onWidgetAudioProcessed?: () => void;
 }
 
 export const MainFeed: React.FC<MainFeedProps> = ({
   onVilmClick,
-  onSettingsClick
+  onSettingsClick,
+  widgetAudioPath,
+  onWidgetAudioProcessed
 }) => {
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState(false);
   const { impact, selection } = useHaptics();
   const { vilms, loading, error, createVilm, deleteVilm } = useVilmStorage();
   const { toast } = useToast();
+
+  // Auto-open recording modal when widget audio is available
+  useEffect(() => {
+    if (widgetAudioPath) {
+      setIsRecordingModalOpen(true);
+    }
+  }, [widgetAudioPath]);
 
   // Preload microphone permissions on mount for faster subsequent recordings
   useEffect(() => {
@@ -45,6 +56,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
 
   const handleCloseRecording = () => {
     setIsRecordingModalOpen(false);
+    
+    // Clear widget audio if it was from widget
+    if (widgetAudioPath && onWidgetAudioProcessed) {
+      onWidgetAudioProcessed();
+    }
   };
 
   const handleSaveVilm = async (title: string, recording: AudioRecording) => {
@@ -53,7 +69,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       handleCloseRecording();
     } catch (error) {
       console.error('Failed to save vilm:', error);
-      // You could show a toast error here
+      toast({
+        title: "Error",
+        description: "Failed to save recording",
+        variant: "destructive"
+      });
     }
   };
 
@@ -170,6 +190,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
         isOpen={isRecordingModalOpen}
         onClose={handleCloseRecording}
         onSave={handleSaveVilm}
+        widgetAudioPath={widgetAudioPath}
       />
     </div>
   );

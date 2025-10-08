@@ -9,5 +9,8 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
+        // Register widget plugin
+        registerPlugin(VilmWidgetPlugin.class);
     }
 }

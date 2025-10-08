@@ -9,11 +9,13 @@ import { useAudioRecording } from '@/hooks/useAudioRecording';
 import { useAudioAnalyzer } from '@/hooks/useAudioAnalyzer';
 import { AudioRecording } from '@/services/nativeAudioService';
 import { App } from '@capacitor/app';
+import { v4 as uuidv4 } from 'uuid';
 
 interface RecordingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (title: string, recording: AudioRecording) => Promise<void>;
+  widgetAudioPath?: string | null;
 }
 
 const formatTime = (seconds: number): string => {
@@ -68,11 +70,13 @@ const WaveformVisualizer: React.FC<{ audioStream: MediaStream | null }> = ({ aud
 export const RecordingModal: React.FC<RecordingModalProps> = ({
   isOpen,
   onClose,
-  onSave
+  onSave,
+  widgetAudioPath
 }) => {
   const [noteTitle, setNoteTitle] = useState('');
   const [stage, setStage] = useState<'recording' | 'finalize'>('recording');
   const [isSaving, setIsSaving] = useState(false);
+  const [widgetRecording, setWidgetRecording] = useState<AudioRecording | null>(null);
   const autoSaveTriggered = useRef(false);
   const { impact } = useHaptics();
   const { 
@@ -86,6 +90,44 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     isCheckingPermission
   } = useAudioRecording();
 
+  // Handle widget audio - skip recording and go straight to finalize
+  useEffect(() => {
+    if (isOpen && widgetAudioPath) {
+      // Load widget audio
+      const loadWidgetAudio = async () => {
+        try {
+          const { Filesystem } = await import('@capacitor/filesystem');
+          const { Capacitor } = await import('@capacitor/core');
+          
+          // Get file info
+          const stat = await Filesystem.stat({
+            path: widgetAudioPath,
+          });
+          
+          // Create recording object from widget audio
+          const recording: AudioRecording = {
+            id: uuidv4(),
+            path: widgetAudioPath,
+            duration: 0, // We don't have duration yet, will be set on playback
+            size: stat.size,
+            isTemporary: true
+          };
+          
+          setWidgetRecording(recording);
+          setStage('finalize');
+        } catch (error) {
+          console.error('Failed to load widget audio:', error);
+          onClose();
+        }
+      };
+      
+      loadWidgetAudio();
+    }
+  }, [isOpen, widgetAudioPath, onClose]);
+
+  // Determine which recording to use
+  const activeRecording = widgetRecording || currentRecording;
+
   // Auto-save grace rule: save recording if app goes to background during finalize stage
   useEffect(() => {
     let appStateListener: any;
@@ -93,7 +135,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     const setupAppStateListener = async () => {
       appStateListener = await App.addListener('appStateChange', (state) => {
         // If app goes to background while in finalize stage and hasn't been auto-saved yet
-        if (!state.isActive && stage === 'finalize' && currentRecording && !autoSaveTriggered.current) {
+        if (!state.isActive && stage === 'finalize' && activeRecording && !autoSaveTriggered.current) {
           autoSaveTriggered.current = true;
           handleAutoSave();
         }
@@ -109,15 +151,15 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
         appStateListener.remove();
       }
     };
-  }, [isOpen, stage, currentRecording]);
+  }, [isOpen, stage, activeRecording]);
 
   const handleAutoSave = async () => {
-    if (!currentRecording) return;
+    if (!activeRecording) return;
     
     try {
       const defaultTitle = generateDefaultTitle();
       // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(defaultTitle, currentRecording);
+      await onSave(defaultTitle, activeRecording);
     } catch (error) {
       console.error('Failed to auto-save recording:', error);
     }
@@ -127,17 +169,21 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   useEffect(() => {
     if (!isOpen || stage === 'recording') {
       autoSaveTriggered.current = false;
+      setWidgetRecording(null);
     }
   }, [isOpen, stage]);
   
   useEffect(() => {
+    // Skip recording if widget audio is provided
+    if (widgetAudioPath) return;
+    
     if (isOpen && stage === 'recording' && !recordingState.isRecording && !recordingState.isProcessing) {
       startRecording().catch((error) => {
         console.error('Failed to start recording:', error);
         onClose();
       });
     }
-  }, [isOpen, stage, recordingState.isRecording, recordingState.isProcessing, startRecording, onClose]);
+  }, [isOpen, stage, recordingState.isRecording, recordingState.isProcessing, startRecording, onClose, widgetAudioPath]);
 
   const handleStopRecording = async () => {
     await impact();
@@ -150,15 +196,27 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (!currentRecording) return;
+    if (!activeRecording) return;
     
     try {
       setIsSaving(true);
       await impact();
       // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(noteTitle.trim() || generateDefaultTitle(), currentRecording);
+      await onSave(noteTitle.trim() || generateDefaultTitle(), activeRecording);
+      
+      // Clean up widget recording if it exists
+      if (widgetRecording) {
+        try {
+          const { VilmWidget } = await import('@/plugins/VilmWidgetPlugin');
+          await VilmWidget.clearTempAudio();
+        } catch (error) {
+          console.error('Failed to clear widget temp audio:', error);
+        }
+      }
+      
       setNoteTitle('');
       setStage('recording');
+      setWidgetRecording(null);
       onClose();
     } catch (error) {
       console.error('Failed to save recording:', error);
@@ -168,37 +226,51 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   };
 
   const handleDiscard = async () => {
-    if (currentRecording?.isTemporary) {
+    if (activeRecording?.isTemporary) {
       // Clean up temporary file
       try {
-        await cancelRecording();
+        if (widgetRecording) {
+          const { VilmWidget } = await import('@/plugins/VilmWidgetPlugin');
+          await VilmWidget.clearTempAudio();
+        } else {
+          await cancelRecording();
+        }
       } catch (error) {
         console.error('Failed to cleanup temporary recording:', error);
       }
     }
     setNoteTitle('');
     setStage('recording');
+    setWidgetRecording(null);
     onClose();
   };
 
   const handleClose = () => {
     // If in finalize stage and hasn't been auto-saved, trigger auto-save
-    if (stage === 'finalize' && currentRecording && !autoSaveTriggered.current) {
+    if (stage === 'finalize' && activeRecording && !autoSaveTriggered.current) {
       autoSaveTriggered.current = true;
       handleAutoSave().then(() => {
         setNoteTitle('');
         setStage('recording');
+        setWidgetRecording(null);
         onClose();
       });
       return;
     }
     
     // Otherwise, clean up temporary file if it exists
-    if (currentRecording?.isTemporary) {
-      cancelRecording().catch(console.error);
+    if (activeRecording?.isTemporary) {
+      if (widgetRecording) {
+        import('@/plugins/VilmWidgetPlugin').then(({ VilmWidget }) => {
+          VilmWidget.clearTempAudio().catch(console.error);
+        });
+      } else {
+        cancelRecording().catch(console.error);
+      }
     }
     setNoteTitle('');
     setStage('recording');
+    setWidgetRecording(null);
     onClose();
   };
 
@@ -308,11 +380,11 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 {/* Pull indicator */}
                 <div className="w-12 h-1 bg-vilm-border rounded-full mx-auto mb-8" />
 
-                 <div className="text-center mb-6">
-                   <p className="text-vilm-text-secondary text-sm">
-                     Recording completed • {formatTime(currentRecording?.duration || 0)}
-                   </p>
-                 </div>
+                  <div className="text-center mb-6">
+                    <p className="text-vilm-text-secondary text-sm">
+                      Recording completed • {formatTime(activeRecording?.duration || 0)}
+                    </p>
+                  </div>
 
                 {/* Title Input */}
                 <div className="mb-8">
@@ -355,7 +427,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                   
                   <Button
                     onClick={handleSave}
-                    disabled={isSaving || !currentRecording}
+                    disabled={isSaving || !activeRecording}
                     className={cn(
                       "flex-1 h-12 rounded-xl",
                       "bg-vilm-primary hover:bg-vilm-primary/90",

@@ -4,4 +4,8 @@
     <string name="title_activity_main">Vilm</string>
     <string name="package_name">com.vilm.app</string>
     <string name="custom_url_scheme">com.vilm.app</string>
+    <string name="widget_description">Quick record voice memos</string>
+    <string name="record">Record</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="processing">Processing</string>
 </resources>

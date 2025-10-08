@@ -6,9 +6,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface PermissionPromptProps {
   onPermissionGranted: () => void;
+  onClose: () => void;
 }
 
-export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ onPermissionGranted }) => {
+export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ onPermissionGranted, onClose }) => {
   const { toast } = useToast();
   const [isRequesting, setIsRequesting] = React.useState(false);
 
@@ -86,7 +87,7 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ onPermission
           onClick={handleRequestPermission}
           disabled={isRequesting}
           className={cn(
-            "w-full px-6 py-3 rounded-lg",
+            "w-full px-6 py-3 rounded-lg mb-3",
             "bg-primary text-primary-foreground",
             "font-medium text-base",
             "hover:opacity-90 active:opacity-80",
@@ -95,6 +96,20 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ onPermission
           )}
         >
           {isRequesting ? 'Requesting...' : 'Allow Microphone Access'}
+        </button>
+        
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className={cn(
+            "w-full px-6 py-3 rounded-lg",
+            "bg-muted text-muted-foreground",
+            "font-medium text-base",
+            "hover:bg-muted/80 active:bg-muted/60",
+            "transition-colors duration-200"
+          )}
+        >
+          Cancel
         </button>
       </div>
     </div>
