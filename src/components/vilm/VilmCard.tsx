@@ -247,8 +247,6 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
             
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Clock className="w-3 h-3" />
-              <span>{formatDuration(vilm.duration)}</span>
-              <span>•</span>
               <span>{formatReadableDate(vilm.createdAt)}</span>
             </div>
           </div>
