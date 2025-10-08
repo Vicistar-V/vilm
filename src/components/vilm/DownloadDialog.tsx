@@ -47,9 +47,10 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
       
       onOpenChange(false);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unable to export as text';
       toast({
         title: "Export Failed",
-        description: "Unable to export as text",
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {
@@ -82,9 +83,10 @@ export const DownloadDialog: React.FC<DownloadDialogProps> = ({
       
       onOpenChange(false);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unable to export audio file';
       toast({
         title: "Export Failed",
-        description: "Unable to export audio file",
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {

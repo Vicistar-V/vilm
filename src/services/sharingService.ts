@@ -182,6 +182,17 @@ class SharingService {
       content += `Created: ${vilm.createdAt.toLocaleDateString()}\n\n`;
       content += `Exported from Vilm App`;
 
+      // Ensure exports directory exists
+      try {
+        await Filesystem.mkdir({
+          path: 'exports',
+          directory: Directory.Documents,
+          recursive: true
+        });
+      } catch (mkdirError) {
+        // Directory already exists
+      }
+
       // Write to Documents directory
       await Filesystem.writeFile({
         path: `exports/${fileName}`,
@@ -192,8 +203,16 @@ class SharingService {
 
       return fileName;
     } catch (error) {
-      console.error('Export failed:', error);
-      throw new Error('Failed to export Vilm as text');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('Export failed:', errorMsg);
+      
+      if (errorMsg.includes('permission')) {
+        throw new Error('Storage permission denied');
+      } else if (errorMsg.includes('not found')) {
+        throw new Error('Storage location not found');
+      } else {
+        throw new Error(`Failed to export as text: ${errorMsg}`);
+      }
     }
   }
 
@@ -226,8 +245,18 @@ class SharingService {
 
       return fileName;
     } catch (error) {
-      console.error('Audio export failed:', error);
-      throw new Error('Failed to export audio file');
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('Audio export failed:', errorMsg);
+      
+      if (errorMsg.includes('not found') || errorMsg.includes('not available')) {
+        throw new Error('Audio file not found in storage');
+      } else if (errorMsg.includes('empty') || errorMsg.includes('corrupted')) {
+        throw new Error('Audio file is corrupted or empty');
+      } else if (errorMsg.includes('permission')) {
+        throw new Error('Storage permission denied');
+      } else {
+        throw new Error(`Failed to export audio: ${errorMsg}`);
+      }
     }
   }
 
