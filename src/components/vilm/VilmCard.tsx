@@ -37,9 +37,16 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
           </div>
           
           {vilm.transcriptionStatus === 'processing' ? (
-            <div className="mb-2 space-y-1">
-              <div className="h-3 bg-muted animate-pulse rounded w-full"></div>
-              <div className="h-3 bg-muted animate-pulse rounded w-3/4"></div>
+            <div className="mb-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-primary">Transcribing audio...</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-2 bg-primary/30 animate-pulse rounded w-full"></div>
+                <div className="h-2 bg-primary/30 animate-pulse rounded w-5/6"></div>
+                <div className="h-2 bg-primary/30 animate-pulse rounded w-4/6"></div>
+              </div>
             </div>
           ) : vilm.transcriptionError ? (
             <p className="text-sm text-destructive/70 italic mb-2">

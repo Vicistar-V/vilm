@@ -139,13 +139,21 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
               </div>
               
               {vilm.transcriptionStatus === 'processing' ? (
-                <div className="p-6 bg-muted/20 rounded-lg">
-                  <div className="space-y-3">
-                    <div className="h-4 bg-muted animate-pulse rounded w-full"></div>
-                    <div className="h-4 bg-muted animate-pulse rounded w-5/6"></div>
-                    <div className="h-4 bg-muted animate-pulse rounded w-4/6"></div>
-                    <div className="h-4 bg-muted animate-pulse rounded w-3/4"></div>
-                    <div className="h-4 bg-muted animate-pulse rounded w-2/3"></div>
+                <div className="p-8 bg-primary/10 rounded-lg border-2 border-primary/30 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4 relative">
+                    <div className="absolute inset-0 rounded-full border-4 border-primary/30 border-t-primary animate-spin"></div>
+                    <FileText className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-primary font-semibold text-lg mb-2">
+                    Transcribing Audio
+                  </p>
+                  <p className="text-primary/70 text-sm mb-4">
+                    Please wait while we process your recording...
+                  </p>
+                  <div className="space-y-2 max-w-md mx-auto">
+                    <div className="h-3 bg-primary/30 animate-pulse rounded w-full"></div>
+                    <div className="h-3 bg-primary/30 animate-pulse rounded w-5/6 mx-auto"></div>
+                    <div className="h-3 bg-primary/30 animate-pulse rounded w-4/6 mx-auto"></div>
                   </div>
                 </div>
               ) : vilm.transcriptionError ? (
