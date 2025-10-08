@@ -177,21 +177,30 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                   )}
                 </div>
               ) : vilm.transcriptionError ? (
-                <div className="p-6 bg-destructive/10 rounded-lg border border-destructive/20 text-center">
-                  <div className="w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-6 h-6 text-destructive" />
+                <div className="p-6 rounded-lg border text-center" style={{ 
+                  backgroundColor: 'hsl(var(--warning) / 0.1)', 
+                  borderColor: 'hsl(var(--warning) / 0.2)' 
+                }}>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ 
+                    backgroundColor: 'hsl(var(--warning) / 0.2)' 
+                  }}>
+                    <FileText className="w-6 h-6" style={{ color: 'hsl(var(--warning))' }} />
                   </div>
-                  <p className="text-destructive font-medium mb-1">
+                  <p className="font-medium mb-1" style={{ color: 'hsl(var(--warning))' }}>
                     Transcription Failed
                   </p>
-                  <p className="text-destructive/70 text-sm mb-4">
+                  <p className="text-sm mb-4" style={{ color: 'hsl(var(--warning) / 0.7)' }}>
                     {vilm.transcriptionError}
                   </p>
                   <Button 
                     variant="outline"
                     size="sm"
                     onClick={handleRetryTranscription}
-                    className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                    style={{ 
+                      borderColor: 'hsl(var(--warning) / 0.3)', 
+                      color: 'hsl(var(--warning))' 
+                    }}
+                    className="hover:bg-[hsl(var(--warning)/0.1)]"
                   >
                     Try Again
                   </Button>

@@ -22,6 +22,7 @@ export default {
         vilm: {
           primary: "hsl(var(--vilm-primary))",
           recording: "hsl(var(--vilm-recording))",
+          warning: "hsl(var(--vilm-warning))",
           surface: "hsl(var(--vilm-surface))",
           text: {
             primary: "hsl(var(--vilm-text-primary))",
@@ -50,6 +51,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",

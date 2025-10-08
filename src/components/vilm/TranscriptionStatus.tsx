@@ -17,7 +17,7 @@ export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
 }) => {
   if (transcriptionStatus === 'failed' || transcriptionError) {
     return (
-      <div className={cn("flex items-center gap-2 text-xs text-destructive", className)}>
+      <div className={cn("flex items-center gap-2 text-xs", className)} style={{ color: 'hsl(var(--warning))' }}>
         <AlertCircle className="w-3 h-3" />
         <span>Transcription failed</span>
       </div>

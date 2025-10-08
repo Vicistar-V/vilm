@@ -282,7 +282,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
                 </div>
               </div>
             ) : vilm.transcriptionError ? (
-              <p className="text-sm text-destructive/70 italic mb-1">
+              <p className="text-sm italic mb-1" style={{ color: 'hsl(var(--warning) / 0.9)' }}>
                 Transcription failed - tap to retry
               </p>
             ) : hasTranscript ? (

@@ -13,6 +13,8 @@
     --vilm-primary-foreground: 0 0% 100%;
     --vilm-recording: 0 83% 59%; /* #FF3B30 System Red */
     --vilm-recording-foreground: 0 0% 100%;
+    --vilm-warning: 28 100% 53%; /* #FF8C00 Soft Orange */
+    --vilm-warning-foreground: 0 0% 100%;
     
     /* Text Colors */
     --vilm-text-primary: 0 0% 7%; /* Near black */
@@ -45,6 +47,8 @@
     --accent-foreground: var(--vilm-primary);
     --destructive: var(--vilm-recording);
     --destructive-foreground: var(--vilm-recording-foreground);
+    --warning: var(--vilm-warning);
+    --warning-foreground: var(--vilm-warning-foreground);
     --border: var(--vilm-border);
     --input: var(--vilm-surface);
     --ring: var(--vilm-border-focus);
@@ -57,6 +61,7 @@
     --vilm-surface: 0 0% 14%; /* Slightly lighter for cards */
     --vilm-primary: 213 100% 50%; /* Same #007AFF */
     --vilm-recording: 0 83% 59%; /* Same #FF3B30 */
+    --vilm-warning: 28 100% 53%; /* Same #FF8C00 */
     
     /* Dark Mode Text */
     --vilm-text-primary: 0 0% 93%; /* Near white */
