@@ -70,36 +70,131 @@ class WebSpeechTranscriptionService {
     };
   }
 
-  async startTranscription(onUpdate: (transcript: string) => void): Promise<boolean> {
+  // Transcribe an audio blob by playing it back and capturing with Web Speech API
+  async transcribeAudioBlob(audioBlob: Blob, onProgress?: (transcript: string) => void): Promise<TranscriptionResult> {
     if (!this.recognition) {
-      console.warn('Web Speech API not available');
-      return false;
+      return {
+        transcript: '',
+        confidence: 0,
+        isSuccess: false,
+        error: 'Web Speech API not available'
+      };
     }
 
-    try {
-      this.currentTranscript = '';
-      this.onTranscriptUpdate = onUpdate;
-      this.isListening = true;
-      this.recognition.start();
-      console.log('Web Speech API transcription started');
-      return true;
-    } catch (error) {
-      console.error('Failed to start transcription:', error);
-      this.isListening = false;
-      return false;
-    }
-  }
-
-  stopTranscription(): string {
-    if (this.recognition && this.isListening) {
-      this.isListening = false;
+    return new Promise((resolve) => {
       try {
-        this.recognition.stop();
+        this.currentTranscript = '';
+        let hasStarted = false;
+
+        // Create audio element to play the recording
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.volume = 0; // Mute for user but system can hear it
+
+        // Set up recognition handlers for this transcription session
+        const cleanup = () => {
+          this.isListening = false;
+          try {
+            this.recognition.stop();
+          } catch (e) {
+            // Ignore errors during cleanup
+          }
+          audio.pause();
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        this.recognition.onresult = (event: any) => {
+          let finalTranscript = '';
+
+          for (let i = 0; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            }
+          }
+
+          if (finalTranscript) {
+            this.currentTranscript += finalTranscript;
+            if (onProgress) {
+              onProgress(this.currentTranscript.trim());
+            }
+          }
+        };
+
+        this.recognition.onerror = (event: any) => {
+          console.error('Speech recognition error during transcription:', event.error);
+          if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            cleanup();
+            resolve({
+              transcript: this.currentTranscript.trim(),
+              confidence: 0.7,
+              isSuccess: this.currentTranscript.length > 0,
+              error: event.error
+            });
+          }
+        };
+
+        this.recognition.onend = () => {
+          // If audio is still playing, restart recognition to continue capturing
+          if (!audio.paused && !audio.ended) {
+            try {
+              this.recognition.start();
+            } catch (error) {
+              console.error('Failed to restart recognition:', error);
+            }
+          }
+        };
+
+        // When audio finishes, stop recognition and return result
+        audio.onended = () => {
+          setTimeout(() => {
+            cleanup();
+            resolve({
+              transcript: this.currentTranscript.trim(),
+              confidence: 0.85,
+              isSuccess: true
+            });
+          }, 500); // Small delay to catch final words
+        };
+
+        audio.onerror = () => {
+          cleanup();
+          resolve({
+            transcript: this.currentTranscript.trim(),
+            confidence: 0,
+            isSuccess: false,
+            error: 'Failed to play audio for transcription'
+          });
+        };
+
+        // Start recognition then play audio
+        this.isListening = true;
+        this.recognition.start();
+        
+        // Start playing audio after a brief delay to ensure recognition is ready
+        setTimeout(() => {
+          audio.play().catch((error) => {
+            console.error('Failed to play audio:', error);
+            cleanup();
+            resolve({
+              transcript: '',
+              confidence: 0,
+              isSuccess: false,
+              error: 'Failed to play audio for transcription'
+            });
+          });
+        }, 100);
+
       } catch (error) {
-        console.error('Error stopping recognition:', error);
+        console.error('Failed to transcribe audio:', error);
+        resolve({
+          transcript: '',
+          confidence: 0,
+          isSuccess: false,
+          error: error instanceof Error ? error.message : 'Transcription failed'
+        });
       }
-    }
-    return this.currentTranscript.trim();
+    });
   }
 
   async isAvailable(): Promise<boolean> {

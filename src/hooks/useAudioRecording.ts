@@ -20,8 +20,9 @@ export const useAudioRecording = () => {
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
   const [isCheckingPermission, setIsCheckingPermission] = useState(false);
   const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
-  const [liveTranscript, setLiveTranscript] = useState<string>('');
+  const [transcript, setTranscript] = useState<string>('');
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionProgress, setTranscriptionProgress] = useState<string>('');
   
   const durationTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -89,20 +90,6 @@ export const useAudioRecording = () => {
           }));
         }, 1000);
 
-        // Start real-time transcription with Web Speech API
-        const transcriptionStarted = await webSpeechTranscriptionService.startTranscription(
-          (transcript) => {
-            setLiveTranscript(transcript);
-          }
-        );
-        
-        if (transcriptionStarted) {
-          setIsTranscribing(true);
-          addDebugLog('✅ Live transcription started', 'success');
-        } else {
-          addDebugLog('⚠️ Live transcription not available', 'warning');
-        }
-
         addDebugLog('✅ Recording fully initialized', 'success');
         return true;
       } else {
@@ -134,17 +121,38 @@ export const useAudioRecording = () => {
         durationTimer.current = null;
       }
 
-      // Stop transcription and get final transcript
-      const finalTranscript = webSpeechTranscriptionService.stopTranscription();
-      setIsTranscribing(false);
-      setLiveTranscript(finalTranscript);
-
       setRecordingState(prev => ({
         ...prev,
         isProcessing: true
       }));
 
       const recording = await nativeAudioService.stopRecording();
+      
+      if (recording) {
+        // Start transcription immediately after recording stops
+        setIsTranscribing(true);
+        setTranscript('');
+        setTranscriptionProgress('');
+        
+        addDebugLog('🎯 Starting post-recording transcription...', 'info');
+        
+        // Transcribe the recorded audio
+        const result = await webSpeechTranscriptionService.transcribeAudioBlob(
+          recording.blob,
+          (progressTranscript) => {
+            setTranscriptionProgress(progressTranscript);
+          }
+        );
+        
+        if (result.isSuccess) {
+          setTranscript(result.transcript);
+          addDebugLog('✅ Transcription completed', 'success');
+        } else {
+          addDebugLog(`⚠️ Transcription failed: ${result.error}`, 'warning');
+        }
+        
+        setIsTranscribing(false);
+      }
       
       setRecordingState({
         isRecording: false,
@@ -157,6 +165,7 @@ export const useAudioRecording = () => {
       return recording;
     } catch (error) {
       console.error('Failed to stop recording:', error);
+      setIsTranscribing(false);
       setRecordingState({
         isRecording: false,
         duration: 0,
@@ -173,10 +182,9 @@ export const useAudioRecording = () => {
         durationTimer.current = null;
       }
 
-      // Stop transcription
-      webSpeechTranscriptionService.stopTranscription();
       setIsTranscribing(false);
-      setLiveTranscript('');
+      setTranscript('');
+      setTranscriptionProgress('');
 
       if (recordingState.isRecording) {
         await nativeAudioService.stopRecording();
@@ -223,7 +231,8 @@ export const useAudioRecording = () => {
     cancelRecording,
     checkPermission,
     debugLog,
-    liveTranscript,
-    isTranscribing
+    transcript,
+    isTranscribing,
+    transcriptionProgress
   };
 };

@@ -8,6 +8,7 @@ export interface AudioRecording {
   duration: number;
   size: number;
   isTemporary: boolean;
+  blob?: Blob; // Keep the audio blob in memory for immediate processing
 }
 
 class NativeAudioService {
@@ -132,7 +133,8 @@ class NativeAudioService {
             path: tempPath,
             duration,
             size: audioBlob.size,
-            isTemporary: true
+            isTemporary: true,
+            blob: audioBlob // Keep blob for immediate transcription
           };
 
           resolve(recording);
