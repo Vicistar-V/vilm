@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { VilmCard } from '@/components/vilm/VilmCard';
@@ -12,6 +12,7 @@ import { useHaptics } from '@/hooks/useHaptics';
 import { useVilmStorage } from '@/hooks/useVilmStorage';
 import { useToast } from '@/hooks/use-toast';
 import { AudioRecording } from '@/services/nativeAudioService';
+import { permissionsService } from '@/services/permissionsService';
 
 interface MainFeedProps {
   onVilmClick: (vilm: Vilm) => void;
@@ -26,6 +27,11 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const { impact, selection } = useHaptics();
   const { vilms, loading, error, createVilm, deleteVilm } = useVilmStorage();
   const { toast } = useToast();
+
+  // Preload microphone permissions on mount for faster subsequent recordings
+  useEffect(() => {
+    permissionsService.checkAllPermissions().catch(console.error);
+  }, []);
 
   const handleOpenRecording = async () => {
     await impact();

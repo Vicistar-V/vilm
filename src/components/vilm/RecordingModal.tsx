@@ -250,10 +250,25 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                     <WaveformVisualizer isRecording={recordingState.isRecording} />
                   </motion.div>
 
-                  {/* Timer */}
-                  <div className="text-3xl font-semibold text-vilm-text-primary font-mono">
-                    {formatTime(recordingState.duration)}
-                  </div>
+                  {/* Timer or Preparing Message */}
+                  {recordingState.isProcessing && !recordingState.isRecording ? (
+                    <div className="text-center">
+                      <motion.div
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="text-2xl font-medium text-vilm-text-secondary mb-2"
+                      >
+                        Preparing to record...
+                      </motion.div>
+                      <p className="text-sm text-vilm-text-secondary/70">
+                        Initializing microphone
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-3xl font-semibold text-vilm-text-primary font-mono">
+                      {formatTime(recordingState.duration)}
+                    </div>
+                  )}
                 </div>
 
                 {/* Stop Button */}
@@ -271,7 +286,11 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                 </Button>
 
                 <p className="text-vilm-text-secondary mt-4 text-sm">
-                  {recordingState.isProcessing ? 'Processing...' : 'Tap to stop recording'}
+                  {recordingState.isProcessing && !recordingState.isRecording
+                    ? 'Getting ready...'
+                    : recordingState.isProcessing
+                    ? 'Processing...'
+                    : 'Tap to stop recording'}
                 </p>
 
                 {/* Debug Panel */}
