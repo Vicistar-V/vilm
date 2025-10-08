@@ -236,7 +236,11 @@ class BrowserTranscriptionService {
       }
 
       console.log('Starting transcription...');
-      const result = await this.transcriber(audioDataUrl);
+      const result = await this.transcriber(audioDataUrl, {
+        chunk_length_s: 30,        // Process in 30-second chunks
+        stride_length_s: 5,        // 5-second overlap between chunks
+        return_timestamps: false   // We only need the transcript text
+      });
       
       // Check if cancelled after transcription
       if (this.cancelledTaskIds.has(taskId)) {
