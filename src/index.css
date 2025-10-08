@@ -29,6 +29,11 @@
     /* States */
     --vilm-hover: 213 100% 97%; /* Very light blue hover */
     --vilm-pressed: 213 100% 94%; /* Slightly darker pressed state */
+    --vilm-success: 142 76% 36%; /* #22C55E Green for success */
+    --vilm-error: 0 84% 60%; /* #EF4444 Red for errors */
+    
+    /* Gradients */
+    --primary-glow: 213 100% 60%; /* Lighter blue for gradients */
     
     /* Semantic tokens mapped to Vilm system */
     --background: var(--vilm-background);

@@ -40,6 +40,15 @@ class BrowserTranscriptionService {
     if (this.transcriber || this.isInitializing) return;
 
     this.isInitializing = true;
+    
+    // Check if model is already cached
+    const isCached = await this.checkModelCache();
+    if (isCached) {
+      console.log('Model already cached, loading from cache...');
+    } else {
+      console.log('Model not cached, will download...');
+    }
+    
     this.setPhase('downloading');
     
     try {
@@ -61,10 +70,15 @@ class BrowserTranscriptionService {
       }
       
       // Use tiny.en model for speed, or 'base.en' for better accuracy
+      // Configure persistent caching to avoid re-downloading model on app restart
       this.transcriber = await pipeline(
         'automatic-speech-recognition',
         'onnx-community/whisper-tiny.en',
-        { device }
+        { 
+          device,
+          cache_dir: 'whisper-models', // Store in IndexedDB for persistence
+          local_files_only: false // Allow download on first run
+        }
       );
       
       console.log(`Whisper transcription initialized successfully on ${device}`);
@@ -160,6 +174,59 @@ class BrowserTranscriptionService {
       return typeof navigator !== 'undefined' && typeof atob !== 'undefined';
     } catch {
       return false;
+    }
+  }
+
+  private async checkModelCache(): Promise<boolean> {
+    try {
+      // Check if model is cached in IndexedDB
+      const cacheKey = 'whisper-models';
+      const caches = await window.caches.keys();
+      return cacheKey && caches.some(key => key.includes(cacheKey));
+    } catch {
+      return false;
+    }
+  }
+
+  async getCacheStatus(): Promise<{ isCached: boolean; estimatedSize?: number }> {
+    try {
+      const isCached = await this.checkModelCache();
+      
+      // Try to estimate cache size
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const estimate = await navigator.storage.estimate();
+        return {
+          isCached,
+          estimatedSize: estimate.usage
+        };
+      }
+      
+      return { isCached };
+    } catch {
+      return { isCached: false };
+    }
+  }
+
+  async clearCache(): Promise<void> {
+    try {
+      const cacheKey = 'whisper-models';
+      const cacheNames = await window.caches.keys();
+      
+      for (const name of cacheNames) {
+        if (name.includes(cacheKey)) {
+          await window.caches.delete(name);
+          console.log(`Cleared cache: ${name}`);
+        }
+      }
+      
+      // Reset transcriber to force re-initialization
+      this.transcriber = null;
+      this.setPhase('idle');
+      
+      console.log('Model cache cleared successfully');
+    } catch (error) {
+      console.error('Failed to clear model cache:', error);
+      throw error;
     }
   }
 }

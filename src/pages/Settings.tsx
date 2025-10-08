@@ -3,6 +3,7 @@ import { ArrowLeft, MessageSquare, Smartphone } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FeedbackModal } from '@/components/vilm/FeedbackModal';
+import { ModelStatusCard } from '@/components/vilm/ModelStatusCard';
 import { useHaptics } from '@/hooks/useHaptics';
 
 interface SettingsProps {
@@ -63,10 +64,10 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
       </header>
 
       {/* Content */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-6 space-y-6">
         {/* App Info */}
         <div className={cn(
-          "bg-vilm-surface rounded-lg p-6 mb-6",
+          "bg-vilm-surface rounded-lg p-6",
           "border border-vilm-border/50",
           "shadow-sm"
         )}>
@@ -87,6 +88,9 @@ export const Settings: React.FC<SettingsProps> = ({ onBack }) => {
             </div>
           </div>
         </div>
+
+        {/* Model Status Card */}
+        <ModelStatusCard />
 
         {/* Settings List */}
         <div className={cn(

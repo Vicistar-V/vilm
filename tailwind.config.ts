@@ -23,6 +23,8 @@ export default {
           primary: "hsl(var(--vilm-primary))",
           recording: "hsl(var(--vilm-recording))",
           warning: "hsl(var(--vilm-warning))",
+          success: "hsl(var(--vilm-success))",
+          error: "hsl(var(--vilm-error))",
           surface: "hsl(var(--vilm-surface))",
           text: {
             primary: "hsl(var(--vilm-text-primary))",
@@ -43,6 +45,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
