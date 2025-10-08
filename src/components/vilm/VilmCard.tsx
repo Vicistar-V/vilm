@@ -81,10 +81,16 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
           }
         };
         
+        const handlePlaying = () => {
+          setIsPlaying(true);
+          console.log('Audio actually playing - timer started');
+        };
+        
         audio.addEventListener('loadedmetadata', setDur);
         audio.addEventListener('durationchange', setDur);
         audio.addEventListener('canplay', setDur);
         audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('playing', handlePlaying);
         audio.addEventListener('ended', handleEnded);
       } catch (err) {
         console.error('Failed to load audio:', err);
@@ -138,8 +144,9 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
         audioRef.current.pause();
         setIsPlaying(false);
       } else {
+        // Don't set isPlaying here - wait for 'playing' event
         await audioRef.current.play();
-        setIsPlaying(true);
+        console.log('Play requested - waiting for playing event');
       }
     } catch (err) {
       console.error('Playback error:', err);
@@ -190,8 +197,8 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
       setIsDragging(false);
       if (audioRef.current && wasPlayingBeforeDragRef.current) {
         try {
+          // Don't set isPlaying here - wait for 'playing' event
           await audioRef.current.play();
-          setIsPlaying(true);
         } catch (err) {
           console.error('Failed to resume after drag:', err);
         }
@@ -227,8 +234,8 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
     setIsDragging(false);
     if (audioRef.current && wasPlayingBeforeDragRef.current) {
       try {
+        // Don't set isPlaying here - wait for 'playing' event
         await audioRef.current.play();
-        setIsPlaying(true);
       } catch (err) {
         console.error('Failed to resume after drag:', err);
       }
