@@ -37,6 +37,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
   const { impact } = useHaptics();
   const isSettingUp = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
   const hasTranscript = vilm.transcript && vilm.transcript.trim() !== '';
+  const isUnready = vilm.isAudioReady === false;
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -261,8 +262,18 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
   
   return (
     <Card 
-      className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
-      onClick={onClick}
+      className={cn(
+        "p-4 transition-colors",
+        isUnready ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-accent/50"
+      )}
+      onClick={(e) => {
+        // Prevent clicking if audio not ready
+        if (isUnready) {
+          e.stopPropagation();
+          return;
+        }
+        onClick();
+      }}
     >
       <div className="space-y-3">
         {/* Header */}
@@ -270,6 +281,11 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
           <div className="flex-1 min-w-0 mr-3">
             <h3 className="font-semibold text-foreground truncate mb-1">
               {vilm.title}
+              {isUnready && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  (Processing audio...)
+                </span>
+              )}
             </h3>
             
             {vilm.transcriptionStatus === 'processing' ? (

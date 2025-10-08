@@ -57,6 +57,25 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     }
   };
 
+  const handleVilmClick = async (vilm: Vilm) => {
+    await selection();
+    
+    // Safety check: ensure audio file exists before navigating
+    if (!vilm.audioFilename) {
+      console.warn('Cannot navigate to vilm without audio file');
+      return;
+    }
+    
+    // Prevent navigation if audio not ready - this shouldn't happen with UI prevention
+    // but adding as an extra safety layer
+    if (vilm.isAudioReady === false) {
+      console.warn('Audio file not ready yet');
+      return;
+    }
+    
+    onVilmClick(vilm);
+  };
+
   return (
     <div className={cn(
       "min-h-screen-safe bg-background",
@@ -103,7 +122,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
               <VilmCard
                 key={vilm.id}
                 vilm={vilm}
-                onClick={() => onVilmClick(vilm)}
+                onClick={() => handleVilmClick(vilm)}
                 onDelete={handleDeleteVilm}
               />
             ))}

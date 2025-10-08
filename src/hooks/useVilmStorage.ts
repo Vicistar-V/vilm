@@ -34,6 +34,23 @@ export const useVilmStorage = () => {
       const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
       console.log('Audio saved:', audioFilename);
       
+      // Verify audio file is accessible with retry logic
+      console.log('Verifying audio file accessibility...');
+      let isAudioReady = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await nativeAudioService.getAudioFile(audioFilename);
+          console.log('Audio file verified and accessible');
+          isAudioReady = true;
+          break;
+        } catch (verifyError) {
+          console.log(`Audio verification attempt ${attempt + 1} failed, retrying...`);
+          if (attempt < 2) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+      }
+      
       const vilm = {
         id,
         title,
@@ -42,7 +59,8 @@ export const useVilmStorage = () => {
         audioFilename,
         transcriptionStatus: 'processing' as const,
         transcriptionError: undefined,
-        transcriptionRetryCount: 0
+        transcriptionRetryCount: 0,
+        isAudioReady
       };
       
       console.log('Saving vilm to database...');

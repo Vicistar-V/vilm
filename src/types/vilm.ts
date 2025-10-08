@@ -10,6 +10,7 @@ export interface Vilm {
   transcriptionStatus?: 'pending' | 'processing' | 'completed' | 'failed'; // transcription state
   transcriptionError?: string; // error message if transcription failed
   transcriptionRetryCount?: number; // number of retry attempts
+  isAudioReady?: boolean; // whether the audio file is accessible and ready to play
 }
 
 export interface RecordingState {
