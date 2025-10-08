@@ -45,6 +45,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
   const [audioDuration, setAudioDuration] = useState(vilm.duration);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   // Load audio
   useEffect(() => {
@@ -63,20 +64,27 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
             setAudioDuration(audio.duration);
           }
         };
-        audio.addEventListener('loadedmetadata', setDur);
-        audio.addEventListener('durationchange', setDur);
-        audio.addEventListener('canplay', setDur);
         
-        audio.addEventListener('timeupdate', () => {
+        const handleTimeUpdate = () => {
           if (!isDragging) {
             setCurrentTime(audio.currentTime);
           }
-        });
+        };
         
-        audio.addEventListener('ended', () => {
+        const handleEnded = () => {
           setIsPlaying(false);
           setCurrentTime(0);
-        });
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+          }
+        };
+        
+        audio.addEventListener('loadedmetadata', setDur);
+        audio.addEventListener('durationchange', setDur);
+        audio.addEventListener('canplay', setDur);
+        audio.addEventListener('timeupdate', handleTimeUpdate);
+        audio.addEventListener('ended', handleEnded);
       } catch (err) {
         console.error('Failed to load audio:', err);
       }
@@ -89,8 +97,34 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     };
-  }, [vilm.audioFilename, isDragging]);
+  }, [vilm.audioFilename]);
+
+  // Animation loop for smooth progress updates
+  useEffect(() => {
+    if (isPlaying && audioRef.current) {
+      const updateProgress = () => {
+        if (audioRef.current && !isDragging) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+        if (isPlaying) {
+          animationFrameRef.current = requestAnimationFrame(updateProgress);
+        }
+      };
+      animationFrameRef.current = requestAnimationFrame(updateProgress);
+      
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+      };
+    }
+  }, [isPlaying, isDragging]);
 
   const handlePlayPause = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -166,6 +200,9 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
     ? audioRef.current.duration
     : (Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : 0);
   const progress = effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0;
+  
+  const formattedCurrentTime = formatDuration(Math.floor(currentTime));
+  const formattedTotalTime = formatDuration(Math.floor(effectiveDuration));
   
   return (
     <Card 
@@ -286,8 +323,8 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick, onDelete }) =
             </div>
 
             {/* Time Display */}
-            <span className="text-xs text-muted-foreground font-mono flex-shrink-0 min-w-[35px] text-right">
-              {formatDuration(Math.floor(currentTime))}
+            <span className="text-xs text-muted-foreground font-mono flex-shrink-0 tabular-nums">
+              {formattedCurrentTime} / {formattedTotalTime}
             </span>
           </div>
         )}

@@ -139,8 +139,6 @@ class NativeAudioService {
 
   async saveRecordingPermanently(tempRecording: AudioRecording): Promise<string> {
     try {
-      const permanentFilename = `${tempRecording.id}.webm`;
-      
       await this.ensureAudioDirectory();
       
       const tempFilename = await this.findTempFile(tempRecording.id);
@@ -152,6 +150,19 @@ class NativeAudioService {
         path: `${this.tempAudioDirectory}/${tempFilename}`,
         directory: Directory.Data
       });
+
+      // Detect correct extension from blob MIME type
+      let extension = '.webm';
+      if (tempRecording.blob) {
+        const mimeType = tempRecording.blob.type;
+        if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
+          extension = '.m4a';
+        } else if (mimeType.includes('webm')) {
+          extension = '.webm';
+        }
+      }
+
+      const permanentFilename = `${tempRecording.id}${extension}`;
 
       await Filesystem.writeFile({
         path: `${this.audioDirectory}/${permanentFilename}`,
@@ -198,16 +209,40 @@ class NativeAudioService {
         directory: Directory.Data
       });
 
-      let mimeType = 'audio/webm';
-      if (filename.endsWith('.mp4')) {
-        mimeType = 'audio/mp4';
-      } else if (filename.endsWith('.m4a')) {
-        mimeType = 'audio/m4a';
-      }
+      // Sniff MIME type from file bytes
+      const mimeType = this.detectMimeType(result.data as string);
 
       return `data:${mimeType};base64,${result.data}`;
     } catch (error) {
       throw new Error(`Failed to read audio file: ${error.message || 'Unknown error'}`);
+    }
+  }
+
+  private detectMimeType(base64Data: string): string {
+    try {
+      // Decode first few bytes to detect format
+      const binary = atob(base64Data.substring(0, 100));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      // Check for WebM signature (EBML header: 0x1A 0x45 0xDF 0xA3)
+      if (bytes[0] === 0x1A && bytes[1] === 0x45 && bytes[2] === 0xDF && bytes[3] === 0xA3) {
+        return 'audio/webm';
+      }
+
+      // Check for MP4/M4A signature ('ftyp' at offset 4)
+      if (bytes.length > 8 && 
+          bytes[4] === 0x66 && bytes[5] === 0x74 && 
+          bytes[6] === 0x79 && bytes[7] === 0x70) {
+        return 'audio/mp4';
+      }
+
+      // Fallback to webm
+      return 'audio/webm';
+    } catch (error) {
+      return 'audio/webm';
     }
   }
 
