@@ -13,25 +13,23 @@ import { useHaptics } from './hooks/useHaptics';
 import { useVilmStorage } from './hooks/useVilmStorage';
 import { sharingService } from './services/sharingService';
 import { App as CapacitorApp } from '@capacitor/app';
-import { ModelInitializer } from '@/components/vilm/ModelInitializer';
+import { browserTranscriptionService } from '@/services/browserTranscriptionService';
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
   const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
-  const [modelInitialized, setModelInitialized] = useState(false);
   
   useStatusBar();
   const { notification } = useHaptics();
   const { vilms, deleteVilm, retryTranscription } = useVilmStorage();
 
-  // Check if model was previously downloaded
+  // Silently initialize model in background on app startup
   useEffect(() => {
-    const wasDownloaded = localStorage.getItem('whisper_model_downloaded');
-    if (wasDownloaded === 'true') {
-      setModelInitialized(true);
-    }
+    browserTranscriptionService.initialize().catch(err => {
+      console.error('Background model initialization failed:', err);
+    });
   }, []);
 
   const handleBack = () => {
@@ -114,11 +112,6 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen-safe bg-background">
-      {/* Model Initializer - shows on first launch */}
-      {!modelInitialized && (
-        <ModelInitializer onComplete={() => setModelInitialized(true)} />
-      )}
-
       {currentView === 'feed' && (
         <MainFeed 
           onVilmClick={handleVilmClick} 
