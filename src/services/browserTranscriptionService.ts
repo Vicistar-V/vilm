@@ -60,6 +60,49 @@ class BrowserTranscriptionService {
     this.progressListeners.forEach(listener => listener(progress));
   }
 
+  async warmFromCache(): Promise<boolean> {
+    if (this.transcriber) {
+      console.log('Transcriber already initialized');
+      return true;
+    }
+
+    try {
+      console.log('Attempting to warm model from cache...');
+      
+      // Try WebGPU first, fallback to WASM
+      let device: 'webgpu' | 'wasm' = 'wasm';
+      
+      if ((navigator as any).gpu) {
+        try {
+          const adapter = await (navigator as any).gpu.requestAdapter();
+          if (adapter) {
+            device = 'webgpu';
+          }
+        } catch {
+          // Silently fallback to WASM
+        }
+      }
+      
+      // Try to load from cache only (no download)
+      this.transcriber = await pipeline(
+        'automatic-speech-recognition',
+        'onnx-community/whisper-tiny.en',
+        { 
+          device,
+          cache_dir: 'whisper-models',
+          local_files_only: true, // Only use cached files
+        }
+      );
+      
+      console.log('Model loaded from cache successfully');
+      this.setPhase('ready');
+      return true;
+    } catch (error) {
+      console.log('Model not in cache or failed to load:', error);
+      return false;
+    }
+  }
+
   async initialize(): Promise<void> {
     if (this.transcriber || this.isInitializing) return;
 
@@ -113,6 +156,10 @@ class BrowserTranscriptionService {
       );
       
       console.log(`Whisper transcription initialized successfully on ${device}`);
+      
+      // Set localStorage flag to indicate model is downloaded
+      localStorage.setItem('whisper_model_downloaded', 'true');
+      
       this.setPhase('ready');
     } catch (error) {
       console.error('Failed to initialize transcription:', error);
@@ -256,6 +303,33 @@ class BrowserTranscriptionService {
 
   async clearCache(): Promise<void> {
     try {
+      // Delete IndexedDB databases used by transformers.js
+      const databases = await indexedDB.databases();
+      const dbsToDelete = databases.filter(db => 
+        db.name?.includes('transformers') || 
+        db.name?.includes('whisper') ||
+        db.name?.includes('onnx') ||
+        db.name?.includes('huggingface')
+      );
+      
+      for (const db of dbsToDelete) {
+        if (db.name) {
+          await new Promise<void>((resolve, reject) => {
+            const request = indexedDB.deleteDatabase(db.name!);
+            request.onsuccess = () => {
+              console.log(`Deleted IndexedDB: ${db.name}`);
+              resolve();
+            };
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => {
+              console.warn(`Deletion blocked for: ${db.name}`);
+              resolve(); // Continue anyway
+            };
+          });
+        }
+      }
+      
+      // Clear Cache API
       const cacheKey = 'whisper-models';
       const cacheNames = await window.caches.keys();
       
@@ -266,9 +340,13 @@ class BrowserTranscriptionService {
         }
       }
       
+      // Clear localStorage flag
+      localStorage.removeItem('whisper_model_downloaded');
+      
       // Reset transcriber to force re-initialization
       this.transcriber = null;
       this.setPhase('idle');
+      this.setProgress(0);
       
       console.log('Model cache cleared successfully');
     } catch (error) {

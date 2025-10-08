@@ -11,13 +11,23 @@ export const ModelStatusCard: React.FC = () => {
     isCached: false
   });
   const [isClearing, setIsClearing] = useState(false);
+  const [isDownloadingManually, setIsDownloadingManually] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const { toast } = useToast();
   const { impact } = useHaptics();
-  const { isDownloading } = useTranscriptionEngine();
+  const { isDownloading, isReady, phase } = useTranscriptionEngine();
 
   useEffect(() => {
-    loadCacheStatus();
+    const init = async () => {
+      await loadCacheStatus();
+      
+      // Try to warm from cache immediately
+      if (localStorage.getItem('whisper_model_downloaded') === 'true') {
+        await browserTranscriptionService.warmFromCache();
+      }
+    };
+    
+    init();
     
     // Subscribe to download progress
     const progressListener = (progress: number) => {
@@ -31,12 +41,44 @@ export const ModelStatusCard: React.FC = () => {
     };
   }, []);
 
+  // Refresh cache status when model becomes ready
+  useEffect(() => {
+    if (phase === 'ready') {
+      loadCacheStatus();
+    }
+  }, [phase]);
+
   const loadCacheStatus = async () => {
     try {
       const status = await browserTranscriptionService.getCacheStatus();
       setCacheStatus(status);
     } catch (error) {
       console.error('Failed to load cache status:', error);
+    }
+  };
+
+  const handleDownloadModel = async () => {
+    try {
+      await impact();
+      setIsDownloadingManually(true);
+      
+      await browserTranscriptionService.initialize();
+      
+      await loadCacheStatus();
+      
+      toast({
+        title: 'Model Downloaded',
+        description: 'AI model is ready for transcription.',
+      });
+    } catch (error) {
+      console.error('Failed to download model:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'Failed to download AI model',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDownloadingManually(false);
     }
   };
 
@@ -47,9 +89,6 @@ export const ModelStatusCard: React.FC = () => {
       
       await browserTranscriptionService.clearCache();
       
-      // Clear the localStorage flag
-      localStorage.removeItem('whisper_model_downloaded');
-      
       await loadCacheStatus();
       
       toast({
@@ -57,7 +96,7 @@ export const ModelStatusCard: React.FC = () => {
         description: 'AI model cache has been cleared. It will be re-downloaded on next use.',
       });
       
-      // Reload the page to trigger re-download
+      // Reload the page to reset state
       setTimeout(() => {
         window.location.reload();
       }, 1500);
@@ -109,12 +148,12 @@ export const ModelStatusCard: React.FC = () => {
         <div className="flex items-center justify-between">
           <span className="text-sm text-vilm-text-secondary">Model Status</span>
           <div className="flex items-center gap-2">
-            {isDownloading ? (
+            {isDownloading || isDownloadingManually ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-vilm-primary" />
                 <span className="text-sm font-medium text-vilm-primary">Downloading... {downloadProgress}%</span>
               </>
-            ) : cacheStatus.isCached ? (
+            ) : isReady || cacheStatus.isCached ? (
               <>
                 <CheckCircle2 className="w-4 h-4 text-vilm-success" />
                 <span className="text-sm font-medium text-vilm-success">Downloaded</span>
@@ -129,7 +168,7 @@ export const ModelStatusCard: React.FC = () => {
         </div>
 
         {/* Download Progress Bar */}
-        {isDownloading && (
+        {(isDownloading || isDownloadingManually) && (
           <div className="w-full">
             <div className="h-2 bg-vilm-surface-dark rounded-full overflow-hidden">
               <div 
@@ -159,34 +198,54 @@ export const ModelStatusCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Clear Cache Button */}
-      {cacheStatus.isCached && (
-        <button
-          onClick={handleClearCache}
-          disabled={isClearing}
-          className={cn(
-            "w-full flex items-center justify-center gap-2",
-            "px-4 py-2 rounded-lg",
-            "bg-vilm-surface border border-vilm-border/50",
-            "text-vilm-text-secondary hover:text-vilm-error",
-            "hover:border-vilm-error/50 hover:bg-vilm-error/5",
-            "transition-all duration-200",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
-          )}
-        >
-          {isClearing ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm font-medium">Clearing...</span>
-            </>
-          ) : (
-            <>
-              <Trash2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Clear Model Cache</span>
-            </>
-          )}
-        </button>
-      )}
+      {/* Action Buttons */}
+      <div className="space-y-2">
+        {/* Download Button - shown when model is not ready/downloading/cached */}
+        {!isReady && !isDownloading && !isDownloadingManually && !cacheStatus.isCached && (
+          <button
+            onClick={handleDownloadModel}
+            className={cn(
+              "w-full flex items-center justify-center gap-2",
+              "px-4 py-2 rounded-lg",
+              "bg-vilm-primary text-white",
+              "hover:bg-vilm-primary/90",
+              "transition-all duration-200"
+            )}
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-sm font-medium">Download AI Model</span>
+          </button>
+        )}
+
+        {/* Clear Cache Button */}
+        {(isReady || cacheStatus.isCached) && (
+          <button
+            onClick={handleClearCache}
+            disabled={isClearing}
+            className={cn(
+              "w-full flex items-center justify-center gap-2",
+              "px-4 py-2 rounded-lg",
+              "bg-vilm-surface border border-vilm-border/50",
+              "text-vilm-text-secondary hover:text-vilm-error",
+              "hover:border-vilm-error/50 hover:bg-vilm-error/5",
+              "transition-all duration-200",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {isClearing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm font-medium">Clearing...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4" />
+                <span className="text-sm font-medium">Clear Model Cache</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
 
       {/* Info Text */}
       <p className="text-xs text-vilm-text-tertiary mt-3">
