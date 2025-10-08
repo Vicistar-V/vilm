@@ -17,20 +17,23 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
-  const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
+  const [selectedVilmId, setSelectedVilmId] = useState<string | null>(null);
   
   useStatusBar();
   const { notification } = useHaptics();
-  const { deleteVilm, retryTranscription } = useVilmStorage();
+  const { vilms, deleteVilm, retryTranscription } = useVilmStorage();
+
+  // Derive the selected vilm from the live vilms array
+  const selectedVilm = selectedVilmId ? vilms.find(v => v.id === selectedVilmId) || null : null;
 
   const handleVilmClick = (vilm: Vilm) => {
-    setSelectedVilm(vilm);
+    setSelectedVilmId(vilm.id);
     setCurrentView('detail');
   };
 
   const handleBack = () => {
     setCurrentView('feed');
-    setSelectedVilm(null);
+    setSelectedVilmId(null);
   };
 
   const handleSettingsClick = () => {
