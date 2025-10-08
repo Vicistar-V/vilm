@@ -100,24 +100,32 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     )}>
       {/* Header */}
       <header className={cn(
-        "flex items-center justify-between px-6 pb-4",
-        "pt-[calc(env(safe-area-inset-top)+1rem)] bg-background",
-        "border-b border-vilm-border/50"
+        "px-6 py-6",
+        "pt-[calc(env(safe-area-inset-top)+1.5rem)]",
+        "bg-gradient-to-b from-background to-background/50 backdrop-blur-sm",
+        "border-b border-border/50"
       )}>
-        <h1 className="text-2xl font-semibold text-vilm-text-primary">
-          Vilm
-        </h1>
-        
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSettingsClick}
-            className="text-vilm-text-secondary hover:text-vilm-text-primary"
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
-          <ThemeToggle />
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">
+              Vilm
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Voice notes, transcribed
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleSettingsClick}
+              className="h-10 w-10 rounded-full hover:bg-muted/50 transition-all duration-200"
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
