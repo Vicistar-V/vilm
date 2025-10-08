@@ -17,6 +17,12 @@ const config: CapacitorConfig = {
     },
     Haptics: {
       enabled: true
+    },
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#F8F8F8',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false
     }
   }
 };
