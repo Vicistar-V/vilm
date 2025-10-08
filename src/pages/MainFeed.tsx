@@ -73,7 +73,8 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       isAudioReady: vilm.isAudioReady 
     });
     
-    await selection();
+    // Fire-and-forget haptic feedback for instant response
+    selection().catch(console.error);
     
     // Safety check: ensure audio file exists before navigating
     if (!vilm.audioFilename) {

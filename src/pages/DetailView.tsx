@@ -29,18 +29,23 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const [currentVilm, setCurrentVilm] = useState(vilm);
   const isSettingUp = phase === 'downloading' && currentVilm.transcriptionStatus === 'processing';
   
-  // Poll for updates while transcription is processing
+  // Poll for updates while transcription is processing - defer start by 500ms
   useEffect(() => {
     if (currentVilm.transcriptionStatus !== 'processing') return;
     
-    const interval = setInterval(async () => {
-      const fresh = await dexieVilmStorage.getVilmById(vilm.id);
-      if (fresh) {
-        setCurrentVilm(fresh);
-      }
-    }, 2000); // Poll every 2 seconds
+    // Defer polling start to avoid blocking initial render
+    const timeout = setTimeout(() => {
+      const interval = setInterval(async () => {
+        const fresh = await dexieVilmStorage.getVilmById(vilm.id);
+        if (fresh) {
+          setCurrentVilm(fresh);
+        }
+      }, 2000); // Poll every 2 seconds
+      
+      return () => clearInterval(interval);
+    }, 500);
     
-    return () => clearInterval(interval);
+    return () => clearTimeout(timeout);
   }, [currentVilm.transcriptionStatus, vilm.id]);
   
   // Safety check: if vilm is missing audioFilename, show error

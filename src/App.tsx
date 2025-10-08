@@ -47,8 +47,10 @@ const AppContent = () => {
       return;
     }
     
+    // Batch state updates by using functional update with both values
     setSelectedVilm(vilm);
-    setCurrentView('detail');
+    // Use setTimeout to batch with React 18's automatic batching
+    setTimeout(() => setCurrentView('detail'), 0);
   };
 
   // Handle Android hardware back button

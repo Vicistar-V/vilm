@@ -38,13 +38,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Load audio file when component mounts
+  // Load audio file when component mounts - with small delay for better perceived performance
   useEffect(() => {
     const loadAudio = async () => {
       if (!audioFilename) {
         setError('No audio file available');
         return;
       }
+
+      // Defer audio loading by 150ms to let UI render first
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       try {
         setIsLoading(true);

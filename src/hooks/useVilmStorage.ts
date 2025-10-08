@@ -16,34 +16,7 @@ export const useVilmStorage = () => {
       setLoading(true);
       setError(null);
       const loadedVilms = await dexieVilmStorage.getAllVilms();
-      
-      // Migration: Set isAudioReady for existing vilms that have audioFilename but no isAudioReady flag
-      const migratedVilms = await Promise.all(
-        loadedVilms.map(async (vilm) => {
-          // If isAudioReady is already defined, return as-is
-          if (vilm.isAudioReady !== undefined) {
-            return vilm;
-          }
-          
-          // If no audioFilename, mark as not ready
-          if (!vilm.audioFilename) {
-            await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: false });
-            return { ...vilm, isAudioReady: false };
-          }
-          
-          // Verify audio file exists
-          try {
-            await nativeAudioService.getAudioFile(vilm.audioFilename);
-            await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: true });
-            return { ...vilm, isAudioReady: true };
-          } catch {
-            await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: false });
-            return { ...vilm, isAudioReady: false };
-          }
-        })
-      );
-      
-      setVilms(migratedVilms);
+      setVilms(loadedVilms);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load vilms');
     } finally {
@@ -196,6 +169,32 @@ export const useVilmStorage = () => {
         
         // Initialize Dexie storage
         await dexieVilmStorage.init();
+        
+        // One-time migration: Set isAudioReady for existing vilms
+        const allVilms = await dexieVilmStorage.getAllVilms();
+        const needsMigration = allVilms.some(v => v.isAudioReady === undefined);
+        
+        if (needsMigration) {
+          console.log('Running one-time audio migration...');
+          await Promise.all(
+            allVilms.map(async (vilm) => {
+              if (vilm.isAudioReady !== undefined) return;
+              
+              if (!vilm.audioFilename) {
+                await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: false });
+                return;
+              }
+              
+              try {
+                await nativeAudioService.getAudioFile(vilm.audioFilename);
+                await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: true });
+              } catch {
+                await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: false });
+              }
+            })
+          );
+          console.log('Audio migration complete');
+        }
         
         // Clean up any abandoned temporary audio files on startup
         await nativeAudioService.cleanupAbandonedTempFiles();
