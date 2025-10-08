@@ -288,7 +288,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
       </main>
 
       {/* Bottom Actions */}
-      <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="border-t bg-background/95">
         <div className="px-4 py-3">
           {/* Share Menu */}
           <ShareMenu vilm={currentVilm} onDelete={handleDelete} />

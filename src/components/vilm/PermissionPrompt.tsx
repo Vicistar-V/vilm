@@ -44,7 +44,7 @@ export const PermissionPrompt: React.FC<PermissionPromptProps> = ({ onPermission
   };
 
   return (
-    <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+    <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-card border border-border rounded-2xl p-8 shadow-xl">
         {/* Icon */}
         <div className="flex justify-center mb-6">

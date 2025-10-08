@@ -109,7 +109,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
       <header className={cn(
         "px-6 py-6",
         "pt-[calc(env(safe-area-inset-top)+1.5rem)]",
-        "bg-gradient-to-b from-background to-background/50 backdrop-blur-sm",
+        "bg-gradient-to-b from-background to-background/50",
         "border-b border-border/50"
       )}>
         <div className="flex items-center justify-between">

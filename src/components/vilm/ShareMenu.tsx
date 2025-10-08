@@ -199,7 +199,7 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete })
   };
 
   return (
-    <Card className="border-0 bg-muted/30 backdrop-blur-sm">
+    <Card className="border-0 bg-muted/30">
       <div className="p-6 space-y-6">
         {/* Primary Actions */}
         <div className="space-y-3">
