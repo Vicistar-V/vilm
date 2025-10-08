@@ -24,7 +24,7 @@ export const useVilmStorage = () => {
     }
   };
 
-  const createVilm = async (title: string, transcript: string, duration: number, tempRecording: AudioRecording): Promise<void> => {
+  const createVilm = async (title: string, duration: number, tempRecording: AudioRecording): Promise<void> => {
     try {
       setError(null);
       
@@ -95,6 +95,41 @@ export const useVilmStorage = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search vilms');
       return [];
+    }
+  };
+
+  const retryTranscription = async (vilmId: string): Promise<void> => {
+    try {
+      setError(null);
+      const vilm = await dexieVilmStorage.getVilmById(vilmId);
+      if (!vilm || !vilm.audioFilename) {
+        throw new Error('Vilm or audio file not found');
+      }
+
+      // Update vilm to processing status
+      await dexieVilmStorage.updateVilm(vilmId, {
+        transcriptionStatus: 'processing',
+        transcriptionError: undefined,
+        transcriptionRetryCount: (vilm.transcriptionRetryCount || 0) + 1
+      });
+
+      // Update local state
+      setVilms(prev => prev.map(v => 
+        v.id === vilmId 
+          ? { 
+              ...v, 
+              transcriptionStatus: 'processing' as const, 
+              transcriptionError: undefined,
+              transcriptionRetryCount: (v.transcriptionRetryCount || 0) + 1
+            } 
+          : v
+      ));
+
+      // Start transcription process
+      await startTranscriptionProcess(vilmId, vilm.audioFilename);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to retry transcription');
+      throw err;
     }
   };
 
@@ -189,6 +224,7 @@ export const useVilmStorage = () => {
     getVilmById,
     searchVilms,
     refreshVilms: loadVilms,
+    retryTranscription,
     browserTranscriptionService
   };
 };

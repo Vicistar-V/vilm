@@ -21,7 +21,7 @@ const AppContent = () => {
   
   useStatusBar();
   const { notification } = useHaptics();
-  const { deleteVilm } = useVilmStorage();
+  const { deleteVilm, retryTranscription } = useVilmStorage();
 
   const handleVilmClick = (vilm: Vilm) => {
     setSelectedVilm(vilm);
@@ -62,6 +62,16 @@ const AppContent = () => {
     }
   };
 
+  const handleRetryTranscription = async (vilmId: string) => {
+    try {
+      await retryTranscription(vilmId);
+      notification('success');
+    } catch (error) {
+      console.error('Failed to retry transcription:', error);
+      notification('error');
+    }
+  };
+
   return (
     <div className="min-h-screen-safe bg-background">
       {currentView === 'feed' && (
@@ -77,6 +87,7 @@ const AppContent = () => {
           onBack={handleBack}
           onShare={handleShare}
           onDelete={handleDelete}
+          onRetryTranscription={handleRetryTranscription}
         />
       )}
 

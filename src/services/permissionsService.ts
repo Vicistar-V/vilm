@@ -1,9 +1,8 @@
 import { Device } from '@capacitor/device';
-import { SpeechRecognition } from '@capacitor-community/speech-recognition';
+import { browserTranscriptionService } from './browserTranscriptionService';
 
 export interface PermissionStatus {
   microphone: boolean;
-  speechRecognition: boolean | null;
   deviceInfo?: any;
   isCheckingPermissions?: boolean;
 }
@@ -11,7 +10,6 @@ export interface PermissionStatus {
 class PermissionsService {
   private permissionStatus: PermissionStatus = {
     microphone: false,
-    speechRecognition: null,
     isCheckingPermissions: false
   };
 
@@ -36,29 +34,6 @@ class PermissionsService {
       // Check microphone permissions (handled by audio recording service)
       this.permissionStatus.microphone = true; // Will be checked by audio service
 
-      // Check if we're on web - skip speech recognition on web
-      const deviceInfo = await Device.getInfo();
-      if (deviceInfo.platform === 'web') {
-        this.permissionStatus.speechRecognition = false;
-        this.permissionStatus.isCheckingPermissions = false;
-        return this.permissionStatus;
-      }
-
-      // Check speech recognition availability and permissions (native only)
-      try {
-        const { available } = await SpeechRecognition.available();
-        if (available) {
-          const permissionResult = await SpeechRecognition.requestPermissions();
-          this.permissionStatus.speechRecognition = 
-            permissionResult.speechRecognition === 'granted';
-        } else {
-          this.permissionStatus.speechRecognition = false;
-        }
-      } catch (error) {
-        console.log('Speech recognition not available on this platform');
-        this.permissionStatus.speechRecognition = false;
-      }
-
       this.permissionStatus.isCheckingPermissions = false;
       return this.permissionStatus;
     } catch (error) {
@@ -68,37 +43,8 @@ class PermissionsService {
     }
   }
 
-  async requestSpeechRecognitionPermission(): Promise<boolean> {
-    try {
-      // Check platform first
-      const deviceInfo = await Device.getInfo();
-      if (deviceInfo.platform === 'web') {
-        console.log('Speech recognition not supported on web');
-        return false;
-      }
-
-      const { available } = await SpeechRecognition.available();
-      if (!available) {
-        return false;
-      }
-
-      const permissionResult = await SpeechRecognition.requestPermissions();
-      const granted = permissionResult.speechRecognition === 'granted';
-      
-      this.permissionStatus.speechRecognition = granted;
-      return granted;
-    } catch (error) {
-      console.log('Speech recognition permission request failed:', error);
-      return false;
-    }
-  }
-
   getPermissionStatus(): PermissionStatus {
     return { ...this.permissionStatus };
-  }
-
-  isSpeechRecognitionAvailable(): boolean {
-    return this.permissionStatus.speechRecognition;
   }
 
   async checkDeviceCapabilities(): Promise<{
@@ -109,11 +55,11 @@ class PermissionsService {
   }> {
     try {
       const deviceInfo = await Device.getInfo();
-      const { available: speechAvailable } = await SpeechRecognition.available();
+      const whisperAvailable = await browserTranscriptionService.isAvailable();
 
       return {
         canRecord: true, // Audio recording is supported on all platforms
-        canTranscribe: speechAvailable,
+        canTranscribe: whisperAvailable, // Whisper-based transcription
         canShare: true, // Share API is supported on all platforms
         platform: deviceInfo.platform
       };

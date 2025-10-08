@@ -18,9 +18,10 @@ interface DetailViewProps {
   onBack: () => void;
   onShare: (vilm: Vilm) => void;
   onDelete: (vilm: Vilm) => void;
+  onRetryTranscription?: (vilmId: string) => void;
 }
 
-export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, onDelete }) => {
+export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, onDelete, onRetryTranscription }) => {
   const { impact, selection } = useHaptics();
   const { toast } = useToast();
   const { phase } = useTranscriptionEngine();
@@ -70,6 +71,25 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
       toast({
         title: "Copy Failed",
         description: "Unable to copy transcript",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRetryTranscription = async () => {
+    try {
+      await impact(ImpactStyle.Medium);
+      if (onRetryTranscription) {
+        onRetryTranscription(vilm.id);
+        toast({
+          title: "Retrying",
+          description: "Starting transcription again..."
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Retry Failed",
+        description: "Unable to retry transcription",
         variant: "destructive"
       });
     }
@@ -180,6 +200,7 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                   <Button 
                     variant="outline"
                     size="sm"
+                    onClick={handleRetryTranscription}
                     className="border-destructive/30 text-destructive hover:bg-destructive/10"
                   >
                     Try Again

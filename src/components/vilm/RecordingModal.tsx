@@ -12,7 +12,7 @@ import { App } from '@capacitor/app';
 interface RecordingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (title: string, transcript: string, duration: number, recording: AudioRecording) => Promise<void>;
+  onSave: (title: string, recording: AudioRecording) => Promise<void>;
 }
 
 const formatTime = (seconds: number): string => {
@@ -108,7 +108,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     try {
       const defaultTitle = generateDefaultTitle();
       // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(defaultTitle, '', currentRecording.duration, currentRecording);
+      await onSave(defaultTitle, currentRecording);
     } catch (error) {
       console.error('Failed to auto-save recording:', error);
     }
@@ -147,7 +147,7 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
       setIsSaving(true);
       await impact();
       // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(noteTitle, '', currentRecording.duration, currentRecording);
+      await onSave(noteTitle, currentRecording);
       setNoteTitle('');
       setStage('recording');
       onClose();

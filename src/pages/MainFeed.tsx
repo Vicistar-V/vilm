@@ -39,9 +39,9 @@ export const MainFeed: React.FC<MainFeedProps> = ({
     setIsRecordingModalOpen(false);
   };
 
-  const handleSaveVilm = async (title: string, transcript: string, duration: number, recording: AudioRecording) => {
+  const handleSaveVilm = async (title: string, recording: AudioRecording) => {
     try {
-      await createVilm(title, transcript, duration, recording);
+      await createVilm(title, recording.duration, recording);
       handleCloseRecording();
     } catch (error) {
       console.error('Failed to save vilm:', error);

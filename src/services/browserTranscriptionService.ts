@@ -45,14 +45,29 @@ class BrowserTranscriptionService {
     try {
       console.log('Initializing browser-based Whisper transcription...');
       
+      // Try WebGPU first, fallback to WASM for broader compatibility
+      let device: 'webgpu' | 'wasm' = 'wasm';
+      
+      if ((navigator as any).gpu) {
+        try {
+          const adapter = await (navigator as any).gpu.requestAdapter();
+          if (adapter) {
+            device = 'webgpu';
+            console.log('Using WebGPU for transcription');
+          }
+        } catch (e) {
+          console.log('WebGPU not available, falling back to WASM');
+        }
+      }
+      
       // Use tiny.en model for speed, or 'base.en' for better accuracy
       this.transcriber = await pipeline(
         'automatic-speech-recognition',
         'onnx-community/whisper-tiny.en',
-        { device: 'webgpu' }
+        { device }
       );
       
-      console.log('Whisper transcription initialized successfully');
+      console.log(`Whisper transcription initialized successfully on ${device}`);
       this.setPhase('ready');
     } catch (error) {
       console.error('Failed to initialize transcription:', error);
@@ -140,12 +155,9 @@ class BrowserTranscriptionService {
 
   async isAvailable(): Promise<boolean> {
     try {
-      // Check if WebGPU is available
-      if (!(navigator as any).gpu) {
-        console.log('WebGPU not available, transcription disabled');
-        return false;
-      }
-      return true;
+      // Whisper can work with both WebGPU and WASM
+      // Check for basic browser compatibility
+      return typeof navigator !== 'undefined' && typeof atob !== 'undefined';
     } catch {
       return false;
     }
