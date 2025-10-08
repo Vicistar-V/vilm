@@ -138,6 +138,11 @@ public class VilmWidgetProvider extends AppWidgetProvider {
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             launchIntent.putExtra("openFinalizeModal", true);
             launchIntent.putExtra("audioFromWidget", true);
+            
+            // Pass the temp audio file path to the app
+            String audioPath = VilmRecordingService.getTempAudioPath(context);
+            launchIntent.putExtra("audioPath", audioPath);
+            
             context.startActivity(launchIntent);
         }
     }
