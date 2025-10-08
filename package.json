@@ -22,6 +22,7 @@
     "@capacitor/haptics": "^7.0.2",
     "@capacitor/ios": "^7.4.3",
     "@capacitor/share": "^7.0.2",
+    "@capacitor/splash-screen": "^7.0.3",
     "@capacitor/status-bar": "^7.0.3",
     "@hookform/resolvers": "^3.10.0",
     "@huggingface/transformers": "^3.7.5",
