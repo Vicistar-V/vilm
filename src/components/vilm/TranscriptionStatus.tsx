@@ -23,16 +23,20 @@ export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
     return (
       <div className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
         <Loader2 className="w-3 h-3 animate-spin" />
-        <span>System setting up...</span>
+        <span>Transcription system still setting up</span>
       </div>
     );
   }
 
   if (transcriptionStatus === 'failed' || transcriptionError) {
-    // Better error message if system not ready
-    const errorText = transcriptionError?.includes('not ready') 
-      ? 'Initialize in Settings'
-      : 'Transcription failed';
+    // Determine appropriate error message
+    let errorText = 'Transcription failed';
+    
+    if (transcriptionError?.includes('download') || transcriptionError?.includes('network') || transcriptionError?.includes('fetch')) {
+      errorText = 'Transcription system setup failed. Please check your internet connection';
+    } else if (transcriptionError?.includes('not ready')) {
+      errorText = 'Initialize in Settings';
+    }
       
     return (
       <div className={cn("flex items-center gap-2 text-xs", className)} style={{ color: 'hsl(var(--warning))' }}>
