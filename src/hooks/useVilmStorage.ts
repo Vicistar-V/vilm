@@ -30,7 +30,9 @@ export const useVilmStorage = () => {
       
       const id = uuidv4();
       
+      console.log('Saving audio permanently...');
       const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
+      console.log('Audio saved:', audioFilename);
       
       const vilm = {
         id,
@@ -43,14 +45,21 @@ export const useVilmStorage = () => {
         transcriptionRetryCount: 0
       };
       
+      console.log('Saving vilm to database...');
       await dexieVilmStorage.saveVilm(vilm);
+      console.log('Vilm saved to database');
       
+      // CRITICAL: Wait for vilms to fully reload before returning
+      console.log('Reloading vilms list...');
       await loadVilms();
+      console.log('Vilms list reloaded - vilm is now in state');
       
+      // Start transcription in background (don't await)
       startTranscriptionProcess(id, audioFilename);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to create vilm';
       setError(errorMsg);
+      console.error('Create vilm error:', errorMsg);
       throw err;
     }
   };

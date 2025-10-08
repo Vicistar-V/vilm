@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +12,7 @@ import { useStatusBar } from './hooks/useStatusBar';
 import { useHaptics } from './hooks/useHaptics';
 import { useVilmStorage } from './hooks/useVilmStorage';
 import { sharingService } from './services/sharingService';
+import { App as CapacitorApp } from '@capacitor/app';
 
 const queryClient = new QueryClient();
 
@@ -26,15 +27,44 @@ const AppContent = () => {
   // Derive the selected vilm from the live vilms array
   const selectedVilm = selectedVilmId ? vilms.find(v => v.id === selectedVilmId) || null : null;
 
-  const handleVilmClick = (vilm: Vilm) => {
-    setSelectedVilmId(vilm.id);
-    setCurrentView('detail');
-  };
-
   const handleBack = () => {
     setCurrentView('feed');
     setSelectedVilmId(null);
   };
+
+  const handleVilmClick = (vilm: Vilm) => {
+    console.log('Vilm clicked:', vilm.id, 'Audio file:', vilm.audioFilename);
+    
+    // Safety check: ensure vilm has required data before navigating
+    if (!vilm.audioFilename) {
+      console.warn('Vilm missing audio file - preventing navigation');
+      notification('error');
+      return;
+    }
+    
+    setSelectedVilmId(vilm.id);
+    setCurrentView('detail');
+  };
+
+  // Handle Android hardware back button
+  useEffect(() => {
+    const backButtonListener = CapacitorApp.addListener('backButton', () => {
+      console.log('Hardware back button pressed - current view:', currentView);
+      
+      if (currentView === 'detail' || currentView === 'settings') {
+        // Navigate back to feed
+        setCurrentView('feed');
+        setSelectedVilmId(null);
+      } else {
+        // On feed view, exit the app
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      backButtonListener.then(listener => listener.remove());
+    };
+  }, [currentView]);
 
   const handleSettingsClick = () => {
     setCurrentView('settings');
@@ -84,7 +114,7 @@ const AppContent = () => {
         />
       )}
       
-      {currentView === 'detail' && selectedVilm && (
+      {currentView === 'detail' && selectedVilm ? (
         <DetailView
           vilm={selectedVilm}
           onBack={handleBack}
@@ -92,7 +122,23 @@ const AppContent = () => {
           onDelete={handleDelete}
           onRetryTranscription={handleRetryTranscription}
         />
-      )}
+      ) : currentView === 'detail' && !selectedVilm ? (
+        // Fallback if vilm not found - show loading or error
+        <div className="min-h-screen bg-background flex items-center justify-center p-6">
+          <div className="text-center">
+            <p className="text-foreground font-medium mb-2">Loading vilm...</p>
+            <p className="text-muted-foreground text-sm mb-4">
+              If this persists, the vilm may have been deleted
+            </p>
+            <button 
+              onClick={handleBack}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+            >
+              Go Back to Feed
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {currentView === 'settings' && (
         <Settings onBack={handleBack} />
