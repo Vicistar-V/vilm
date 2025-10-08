@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeft, Share, Trash2, FileText, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -26,6 +26,18 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
   const { toast } = useToast();
   const { phase } = useTranscriptionEngine();
   const isSettingUp = phase === 'downloading' && vilm.transcriptionStatus === 'processing';
+  
+  // Safety check: if vilm is missing audioFilename, show error
+  useEffect(() => {
+    if (!vilm.audioFilename) {
+      console.error('DetailView received vilm without audioFilename:', vilm.id);
+      toast({
+        title: "Audio Error",
+        description: "Audio file is missing for this recording",
+        variant: "destructive"
+      });
+    }
+  }, [vilm, toast]);
 
   const handleBack = async () => {
     await impact(ImpactStyle.Light);

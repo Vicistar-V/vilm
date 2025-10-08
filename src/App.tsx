@@ -19,13 +19,26 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
   const [selectedVilmId, setSelectedVilmId] = useState<string | null>(null);
+  const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
   
   useStatusBar();
   const { notification } = useHaptics();
-  const { vilms, deleteVilm, retryTranscription } = useVilmStorage();
+  const { vilms, deleteVilm, retryTranscription, getVilmById } = useVilmStorage();
 
-  // Derive the selected vilm from the live vilms array
-  const selectedVilm = selectedVilmId ? vilms.find(v => v.id === selectedVilmId) || null : null;
+  // Fetch the full vilm from database when selectedVilmId changes
+  useEffect(() => {
+    const fetchVilm = async () => {
+      if (selectedVilmId) {
+        console.log('Fetching vilm from database:', selectedVilmId);
+        const vilm = await getVilmById(selectedVilmId);
+        console.log('Fetched vilm:', vilm ? { id: vilm.id, audioFilename: vilm.audioFilename, isAudioReady: vilm.isAudioReady } : 'null');
+        setSelectedVilm(vilm);
+      } else {
+        setSelectedVilm(null);
+      }
+    };
+    fetchVilm();
+  }, [selectedVilmId, getVilmById]);
 
   const handleBack = () => {
     setCurrentView('feed');

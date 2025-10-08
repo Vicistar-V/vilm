@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Vilm } from '@/types/vilm';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useVilmStorage } from '@/hooks/useVilmStorage';
+import { useToast } from '@/hooks/use-toast';
 import { AudioRecording } from '@/services/nativeAudioService';
 
 interface MainFeedProps {
@@ -24,6 +25,7 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   const [isRecordingModalOpen, setIsRecordingModalOpen] = useState(false);
   const { impact, selection } = useHaptics();
   const { vilms, loading, error, createVilm, deleteVilm } = useVilmStorage();
+  const { toast } = useToast();
 
   const handleOpenRecording = async () => {
     await impact();
@@ -58,18 +60,33 @@ export const MainFeed: React.FC<MainFeedProps> = ({
   };
 
   const handleVilmClick = async (vilm: Vilm) => {
+    console.log('Vilm clicked:', { 
+      id: vilm.id, 
+      title: vilm.title,
+      audioFilename: vilm.audioFilename, 
+      isAudioReady: vilm.isAudioReady 
+    });
+    
     await selection();
     
     // Safety check: ensure audio file exists before navigating
     if (!vilm.audioFilename) {
       console.warn('Cannot navigate to vilm without audio file');
+      toast({
+        title: "Cannot open",
+        description: "Audio file is missing",
+        variant: "destructive"
+      });
       return;
     }
     
-    // Prevent navigation if audio not ready - this shouldn't happen with UI prevention
-    // but adding as an extra safety layer
-    if (vilm.isAudioReady === false) {
-      console.warn('Audio file not ready yet');
+    // Prevent navigation if audio not ready (catches both false and undefined)
+    if (vilm.isAudioReady !== true) {
+      console.warn('Audio file not ready yet:', vilm.isAudioReady);
+      toast({
+        title: "Audio still processing",
+        description: "Please wait a moment and try again",
+      });
       return;
     }
     

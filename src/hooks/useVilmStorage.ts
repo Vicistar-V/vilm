@@ -16,7 +16,34 @@ export const useVilmStorage = () => {
       setLoading(true);
       setError(null);
       const loadedVilms = await dexieVilmStorage.getAllVilms();
-      setVilms(loadedVilms);
+      
+      // Migration: Set isAudioReady for existing vilms that have audioFilename but no isAudioReady flag
+      const migratedVilms = await Promise.all(
+        loadedVilms.map(async (vilm) => {
+          // If isAudioReady is already defined, return as-is
+          if (vilm.isAudioReady !== undefined) {
+            return vilm;
+          }
+          
+          // If no audioFilename, mark as not ready
+          if (!vilm.audioFilename) {
+            await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: false });
+            return { ...vilm, isAudioReady: false };
+          }
+          
+          // Verify audio file exists
+          try {
+            await nativeAudioService.getAudioFile(vilm.audioFilename);
+            await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: true });
+            return { ...vilm, isAudioReady: true };
+          } catch {
+            await dexieVilmStorage.updateVilm(vilm.id, { isAudioReady: false });
+            return { ...vilm, isAudioReady: false };
+          }
+        })
+      );
+      
+      setVilms(migratedVilms);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load vilms');
     } finally {
