@@ -70,11 +70,11 @@ class SharingService {
           debugLogger.info('Share', `Getting audio data: ${vilm.audioFilename}`);
           const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
           
-          let extension = 'm4a';
-          if (mimeType.includes('webm')) {
-            extension = 'webm';
-          } else if (mimeType.includes('mp4')) {
+          let extension = 'webm';
+          if (mimeType.includes('mp4')) {
             extension = 'mp4';
+          } else if (mimeType.includes('m4a')) {
+            extension = 'm4a';
           }
           
           const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;

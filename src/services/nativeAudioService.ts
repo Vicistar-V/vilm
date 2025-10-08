@@ -146,7 +146,7 @@ class NativeAudioService {
 
   async saveRecordingPermanently(tempRecording: AudioRecording): Promise<string> {
     try {
-      const permanentFilename = `${tempRecording.id}.m4a`;
+      const permanentFilename = `${tempRecording.id}.webm`;
       debugLogger.info('Storage', `Saving recording permanently: ${permanentFilename}`);
       
       await this.ensureAudioDirectory();
@@ -212,11 +212,11 @@ class NativeAudioService {
         directory: Directory.Data
       });
 
-      let mimeType = 'audio/m4a';
-      if (filename.endsWith('.webm')) {
-        mimeType = 'audio/webm';
-      } else if (filename.endsWith('.mp4')) {
+      let mimeType = 'audio/webm';
+      if (filename.endsWith('.mp4')) {
         mimeType = 'audio/mp4';
+      } else if (filename.endsWith('.m4a')) {
+        mimeType = 'audio/m4a';
       }
 
       debugLogger.success('Storage', `Audio file loaded: ${filename}`);
@@ -250,11 +250,11 @@ class NativeAudioService {
         directory: Directory.Data
       });
 
-      let mimeType = 'audio/m4a';
-      if (filename.endsWith('.webm')) {
-        mimeType = 'audio/webm';
-      } else if (filename.endsWith('.mp4')) {
+      let mimeType = 'audio/webm';
+      if (filename.endsWith('.mp4')) {
         mimeType = 'audio/mp4';
+      } else if (filename.endsWith('.m4a')) {
+        mimeType = 'audio/m4a';
       }
 
       debugLogger.success('Storage', `File data retrieved: ${mimeType}`);
