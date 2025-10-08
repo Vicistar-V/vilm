@@ -149,15 +149,26 @@ class SharingService {
     } catch (error) {
       const errorMsg = error.message || String(error);
       
-      if (errorMsg.includes('Share canceled')) {
+      console.log('[SharingService] Share error:', errorMsg);
+      
+      // Check for various cancellation patterns
+      const cancellationPatterns = ['cancel', 'abort', 'dismiss', 'user closed'];
+      const isCancellation = !errorMsg || 
+                            errorMsg.trim() === '' ||
+                            cancellationPatterns.some(pattern => 
+                              errorMsg.toLowerCase().includes(pattern)
+                            );
+      
+      if (isCancellation) {
         throw new Error('Share canceled');
-      } else if (errorMsg.includes('NotAllowedError')) {
-        throw new Error('Sharing not allowed. Check app permissions.');
-      } else if (errorMsg.includes('AbortError')) {
-        throw new Error('Sharing was cancelled.');
-      } else {
-        throw new Error(`Failed to share Vilm: ${errorMsg}`);
       }
+      
+      // Real errors
+      if (errorMsg.includes('NotAllowedError')) {
+        throw new Error('Sharing not allowed. Check app permissions.');
+      }
+      
+      throw new Error(`Failed to share Vilm: ${errorMsg}`);
     }
   }
 

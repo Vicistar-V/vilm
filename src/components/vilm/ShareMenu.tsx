@@ -104,6 +104,17 @@ export const ShareMenu: React.FC<ShareMenuProps> = ({ vilm, onClose, onDelete })
       
       onClose?.();
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unable to share transcript';
+      
+      // Don't show error for user cancellation
+      if (!errorMsg || 
+          errorMsg.toLowerCase().includes('cancel') ||
+          errorMsg.toLowerCase().includes('abort') ||
+          errorMsg.toLowerCase().includes('dismiss')) {
+        console.log('[ShareMenu] Share was canceled by user');
+        return;
+      }
+      
       toast({
         title: "Share Failed",
         description: "Unable to share transcript",
