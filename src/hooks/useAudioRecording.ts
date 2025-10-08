@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { RecordingState } from '@/types/vilm';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
+import { webSpeechTranscriptionService } from '@/services/webSpeechTranscriptionService';
 
 export interface DebugLogEntry {
   timestamp: string;
@@ -19,6 +20,8 @@ export const useAudioRecording = () => {
   const [currentRecordingId, setCurrentRecordingId] = useState<string | null>(null);
   const [isCheckingPermission, setIsCheckingPermission] = useState(false);
   const [debugLog, setDebugLog] = useState<DebugLogEntry[]>([]);
+  const [liveTranscript, setLiveTranscript] = useState<string>('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
   
   const durationTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -86,6 +89,20 @@ export const useAudioRecording = () => {
           }));
         }, 1000);
 
+        // Start real-time transcription with Web Speech API
+        const transcriptionStarted = await webSpeechTranscriptionService.startTranscription(
+          (transcript) => {
+            setLiveTranscript(transcript);
+          }
+        );
+        
+        if (transcriptionStarted) {
+          setIsTranscribing(true);
+          addDebugLog('✅ Live transcription started', 'success');
+        } else {
+          addDebugLog('⚠️ Live transcription not available', 'warning');
+        }
+
         addDebugLog('✅ Recording fully initialized', 'success');
         return true;
       } else {
@@ -116,6 +133,11 @@ export const useAudioRecording = () => {
         clearInterval(durationTimer.current);
         durationTimer.current = null;
       }
+
+      // Stop transcription and get final transcript
+      const finalTranscript = webSpeechTranscriptionService.stopTranscription();
+      setIsTranscribing(false);
+      setLiveTranscript(finalTranscript);
 
       setRecordingState(prev => ({
         ...prev,
@@ -150,6 +172,11 @@ export const useAudioRecording = () => {
         clearInterval(durationTimer.current);
         durationTimer.current = null;
       }
+
+      // Stop transcription
+      webSpeechTranscriptionService.stopTranscription();
+      setIsTranscribing(false);
+      setLiveTranscript('');
 
       if (recordingState.isRecording) {
         await nativeAudioService.stopRecording();
@@ -195,6 +222,8 @@ export const useAudioRecording = () => {
     stopRecording,
     cancelRecording,
     checkPermission,
-    debugLog
+    debugLog,
+    liveTranscript,
+    isTranscribing
   };
 };

@@ -74,7 +74,9 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     cancelRecording,
     hasPermission,
     isCheckingPermission,
-    debugLog
+    debugLog,
+    liveTranscript,
+    isTranscribing
   } = useAudioRecording();
 
   // Auto-save grace rule: save recording if app goes to background during finalize stage
@@ -107,8 +109,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     
     try {
       const defaultTitle = generateDefaultTitle();
-      // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(defaultTitle, '', currentRecording.duration, currentRecording);
+      // Pass the recording object and transcript (temporary file info) to be saved permanently
+      await onSave(defaultTitle, liveTranscript, currentRecording.duration, currentRecording);
     } catch (error) {
       console.error('Failed to auto-save recording:', error);
     }
@@ -146,8 +148,8 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
     try {
       setIsSaving(true);
       await impact();
-      // Pass the recording object (temporary file info) to be saved permanently
-      await onSave(noteTitle, '', currentRecording.duration, currentRecording);
+      // Pass the recording object and transcript (temporary file info) to be saved permanently
+      await onSave(noteTitle, liveTranscript, currentRecording.duration, currentRecording);
       setNoteTitle('');
       setStage('recording');
       onClose();
@@ -274,6 +276,23 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                   {recordingState.isProcessing ? 'Processing...' : 'Tap to stop recording'}
                 </p>
 
+                {/* Live Transcription Display */}
+                {isTranscribing && liveTranscript && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-6 p-4 bg-vilm-primary/5 border border-vilm-primary/20 rounded-xl"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-vilm-primary rounded-full animate-pulse" />
+                      <span className="text-xs font-medium text-vilm-primary">Live Transcription</span>
+                    </div>
+                    <p className="text-sm text-vilm-text-primary leading-relaxed">
+                      {liveTranscript}
+                    </p>
+                  </motion.div>
+                )}
+
                 {/* Debug Panel */}
                 <div className="mt-8 p-4 bg-red-500/10 border border-red-500/30 rounded-lg max-h-64 overflow-y-auto text-left">
                   <div className="text-xs font-bold text-red-600 mb-3 flex items-center justify-between">
@@ -330,6 +349,14 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
                    <p className="text-vilm-text-secondary text-sm">
                      Recording completed • {formatTime(currentRecording?.duration || 0)}
                    </p>
+                   {liveTranscript && (
+                     <div className="mt-4 p-3 bg-vilm-primary/5 border border-vilm-primary/20 rounded-lg text-left">
+                       <p className="text-xs font-medium text-vilm-primary mb-1">Transcript</p>
+                       <p className="text-sm text-vilm-text-primary">
+                         {liveTranscript}
+                       </p>
+                     </div>
+                   )}
                  </div>
 
                 {/* Title Input */}
