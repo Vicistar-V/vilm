@@ -239,30 +239,33 @@ export const useVilmStorage = () => {
             : v
         ));
       } else {
+        // Check if error is due to cancellation
         const errorMsg = result.error || 'Transcription failed';
+        const isCancelled = errorMsg.toLowerCase().includes('cancel');
         
         await dexieVilmStorage.updateVilm(vilmId, {
           transcriptionStatus: 'failed',
-          transcriptionError: errorMsg
+          transcriptionError: isCancelled ? 'Cancelled by user' : errorMsg
         });
         
         setVilms(prev => prev.map(v => 
           v.id === vilmId 
-            ? { ...v, transcriptionStatus: 'failed' as const, transcriptionError: errorMsg }
+            ? { ...v, transcriptionStatus: 'failed' as const, transcriptionError: isCancelled ? 'Cancelled by user' : errorMsg }
             : v
         ));
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const isCancelled = errorMsg.toLowerCase().includes('cancel');
       
       await dexieVilmStorage.updateVilm(vilmId, {
         transcriptionStatus: 'failed',
-        transcriptionError: `Transcription failed: ${errorMsg}`
+        transcriptionError: isCancelled ? 'Cancelled by user' : `Transcription failed: ${errorMsg}`
       });
       
       setVilms(prev => prev.map(v => 
         v.id === vilmId 
-          ? { ...v, transcriptionStatus: 'failed' as const, transcriptionError: `Transcription failed: ${errorMsg}` }
+          ? { ...v, transcriptionStatus: 'failed' as const, transcriptionError: isCancelled ? 'Cancelled by user' : `Transcription failed: ${errorMsg}` }
           : v
       ));
     }

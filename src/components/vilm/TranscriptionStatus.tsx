@@ -1,22 +1,32 @@
 import React from 'react';
-import { Loader2, FileText, AlertCircle } from 'lucide-react';
+import { Loader2, FileText, AlertCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
+import { Button } from '@/components/ui/button';
 
 interface TranscriptionStatusProps {
   transcript?: string;
   transcriptionStatus?: 'pending' | 'processing' | 'completed' | 'failed';
   transcriptionError?: string;
   className?: string;
+  vilmId?: string;
+  onCancel?: () => void;
 }
 
 export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
   transcript,
   transcriptionStatus,
   transcriptionError,
-  className
+  className,
+  vilmId,
+  onCancel
 }) => {
-  const { isDownloading } = useTranscriptionEngine();
+  const { isDownloading, cancelTranscription } = useTranscriptionEngine();
+
+  const handleCancel = () => {
+    cancelTranscription();
+    onCancel?.();
+  };
 
   // Show setup status if model is downloading
   if (isDownloading && transcriptionError?.includes('setting up')) {
@@ -51,6 +61,17 @@ export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
       <div className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
         <Loader2 className="w-3 h-3 animate-spin" />
         <span>Transcribing...</span>
+        {vilmId && onCancel && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            className="h-5 px-2 py-0 text-xs hover:bg-destructive/10 hover:text-destructive"
+            title="Cancel transcription"
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        )}
       </div>
     );
   }

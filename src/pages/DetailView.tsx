@@ -203,6 +203,26 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                     transcript={currentVilm.transcript}
                     transcriptionStatus={currentVilm.transcriptionStatus}
                     transcriptionError={currentVilm.transcriptionError}
+                    vilmId={currentVilm.id}
+                    onCancel={async () => {
+                      await impact(ImpactStyle.Medium);
+                      // Update local state immediately
+                      setCurrentVilm(prev => ({
+                        ...prev,
+                        transcriptionStatus: 'failed',
+                        transcriptionError: 'Cancelled by user'
+                      }));
+                      // Update storage
+                      await dexieVilmStorage.updateVilm(currentVilm.id, {
+                        transcriptionStatus: 'failed',
+                        transcriptionError: 'Cancelled by user'
+                      });
+                      toast({
+                        title: "Cancelled",
+                        description: "Transcription cancelled. You can retry anytime.",
+                        duration: 3000
+                      });
+                    }}
                   />
                 </div>
                 {currentVilm.transcript && currentVilm.transcript.trim() !== '' && currentVilm.transcriptionStatus !== 'processing' && (

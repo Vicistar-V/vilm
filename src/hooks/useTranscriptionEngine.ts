@@ -20,10 +20,15 @@ export const useTranscriptionEngine = () => {
     };
   }, []);
 
+  const cancelTranscription = () => {
+    browserTranscriptionService.cancelTranscription();
+  };
+
   return {
     phase,
     isReady: phase === 'ready',
     isDownloading: phase === 'downloading',
-    hasError: phase === 'error'
+    hasError: phase === 'error',
+    cancelTranscription
   };
 };
