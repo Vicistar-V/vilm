@@ -58,6 +58,8 @@ class NativeAudioService {
             mimeType = 'audio/mp4;codecs=mp4a.40.2';
           }
 
+          console.log('[Recording] MediaRecorder MIME type:', mimeType);
+          
           this.mediaRecorder = new MediaRecorder(stream, { mimeType });
           this.audioChunks = [];
           this.currentRecordingId = uuidv4();
@@ -122,9 +124,11 @@ class NativeAudioService {
       this.mediaRecorder.onstop = async () => {
         try {
           const mimeType = this.mediaRecorder?.mimeType || 'audio/webm';
+          console.log('[Recording] Stopping recording with MIME type:', mimeType);
           const audioBlob = new Blob(this.audioChunks, { type: mimeType });
           
-          const tempFilename = this.generateTempAudioFilename(recordingId);
+          const tempFilename = this.generateTempAudioFilename(recordingId, mimeType);
+          console.log('[Recording] Generated temp filename:', tempFilename);
           const tempPath = await this.saveTemporaryAudioFile(audioBlob, tempFilename);
           
           if (this.mediaRecorder?.stream) {
@@ -171,22 +175,34 @@ class NativeAudioService {
 
       // Detect correct extension from blob MIME type
       let extension = '.webm';
+      let mimeType = 'audio/webm';
       if (tempRecording.blob) {
-        const mimeType = tempRecording.blob.type;
+        mimeType = tempRecording.blob.type;
+        console.log('[NativeAudio] Blob MIME type:', mimeType);
         if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
           extension = '.m4a';
         } else if (mimeType.includes('webm')) {
           extension = '.webm';
         }
       }
-
+      
+      console.log('[NativeAudio] Using extension:', extension);
       const permanentFilename = `${tempRecording.id}${extension}`;
+      console.log('[NativeAudio] Permanent filename:', permanentFilename);
 
       await Filesystem.writeFile({
         path: `${this.audioDirectory}/${permanentFilename}`,
         data: tempFileResult.data,
         directory: Directory.Data
       });
+      
+      // Phase 5: Verify file integrity after saving
+      console.log('[NativeAudio] Verifying saved file integrity...');
+      const verificationResult = await this.verifyFileIntegrity(permanentFilename, tempFileResult.data as string);
+      if (!verificationResult.valid) {
+        throw new Error(`File integrity check failed: ${verificationResult.error}`);
+      }
+      console.log('[NativeAudio] File integrity verified successfully');
 
       await this.deleteTemporaryRecording(tempRecording.id);
 
@@ -290,7 +306,7 @@ class NativeAudioService {
     }
   }
 
-  async getAudioFileData(filename: string): Promise<{ data: string; mimeType: string }> {
+  async getAudioFileData(filename: string, retryCount: number = 0): Promise<{ data: string; mimeType: string }> {
     try {
       // Verify file exists first
       const exists = await this.verifyAudioFileExists(filename);
@@ -298,26 +314,46 @@ class NativeAudioService {
         throw new Error(`Audio file "${filename}" not found in storage`);
       }
 
-      console.log('[NativeAudio] Reading audio file:', filename);
+      console.log('[NativeAudio] Reading audio file:', filename, retryCount > 0 ? `(Retry ${retryCount})` : '');
       const result = await Filesystem.readFile({
         path: `${this.audioDirectory}/${filename}`,
         directory: Directory.Data
       });
 
-      let mimeType = 'audio/webm';
+      // Phase 1: Use content sniffing instead of filename extension
+      const detectedMimeType = this.detectMimeType(result.data as string);
+      
+      // Also get extension-based MIME type for logging
+      let extensionMimeType = 'audio/webm';
       if (filename.endsWith('.mp4')) {
-        mimeType = 'audio/mp4';
+        extensionMimeType = 'audio/mp4';
       } else if (filename.endsWith('.m4a')) {
-        mimeType = 'audio/m4a';
+        extensionMimeType = 'audio/m4a';
       }
+      
+      console.log('[NativeAudio] Extension suggests:', extensionMimeType);
+      console.log('[NativeAudio] Content detected as:', detectedMimeType);
 
       const dataLength = (result.data as string).length;
       console.log('[NativeAudio] Audio file read successfully. Base64 length:', dataLength);
+      
+      // Validate that we got actual data
+      if (!result.data || dataLength === 0) {
+        throw new Error('Audio file is empty or corrupted');
+      }
 
-      return { data: result.data as string, mimeType };
+      return { data: result.data as string, mimeType: detectedMimeType };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('[NativeAudio] Failed to get audio file data:', errorMsg);
+      
+      // Phase 5: Retry mechanism - retry once after 500ms
+      if (retryCount === 0 && !errorMsg.includes('not found')) {
+        console.log('[NativeAudio] Retrying file read after 500ms delay...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return this.getAudioFileData(filename, retryCount + 1);
+      }
+      
       throw new Error(`Failed to read audio file: ${errorMsg}`);
     }
   }
@@ -439,8 +475,20 @@ class NativeAudioService {
     });
   }
 
-  private generateTempAudioFilename(recordingId: string): string {
-    return `temp_${recordingId}_${Date.now()}.webm`;
+  private generateTempAudioFilename(recordingId: string, mimeType?: string): string {
+    // Phase 3: Generate correct extension based on MIME type
+    let extension = 'webm';
+    if (mimeType) {
+      console.log('[Recording] Generating temp filename for MIME:', mimeType);
+      if (mimeType.includes('mp4') || mimeType.includes('m4a')) {
+        extension = 'm4a';
+      } else if (mimeType.includes('webm')) {
+        extension = 'webm';
+      }
+    }
+    const filename = `temp_${recordingId}_${Date.now()}.${extension}`;
+    console.log('[Recording] Generated temp filename:', filename);
+    return filename;
   }
 
   private getTempFilename(recordingId: string): string {
@@ -463,6 +511,48 @@ class NativeAudioService {
     } catch (error) {
       console.error('Failed to find temp file:', error);
       return null;
+    }
+  }
+
+  // Phase 5: Add file integrity verification
+  private async verifyFileIntegrity(filename: string, originalData: string): Promise<{ valid: boolean; error?: string }> {
+    try {
+      const result = await Filesystem.readFile({
+        path: `${this.audioDirectory}/${filename}`,
+        directory: Directory.Data
+      });
+      
+      const readData = result.data as string;
+      
+      // Check if file is readable
+      if (!readData) {
+        return { valid: false, error: 'File is empty after saving' };
+      }
+      
+      // Check if data length matches (allowing small differences due to encoding)
+      const originalLength = originalData.length;
+      const readLength = readData.length;
+      const lengthDiff = Math.abs(originalLength - readLength);
+      
+      if (lengthDiff > 100) { // Allow small differences
+        return { 
+          valid: false, 
+          error: `Data size mismatch: original ${originalLength}, read ${readLength}` 
+        };
+      }
+      
+      // Try to detect MIME type to ensure it's valid audio data
+      const mimeType = this.detectMimeType(readData);
+      if (!mimeType.startsWith('audio/')) {
+        return { valid: false, error: `Invalid audio format detected: ${mimeType}` };
+      }
+      
+      return { valid: true };
+    } catch (error) {
+      return { 
+        valid: false, 
+        error: error instanceof Error ? error.message : 'Unknown verification error' 
+      };
     }
   }
 
