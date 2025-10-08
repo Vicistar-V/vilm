@@ -2,7 +2,6 @@ import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { nativeAudioService } from './nativeAudioService';
 import { Vilm } from '@/types/vilm';
-import { debugLogger } from '@/components/debug/DebugOverlay';
 
 export interface ShareOptions {
   includeAudio?: boolean;
@@ -53,8 +52,6 @@ class SharingService {
       // If audio is requested and available
       if (includeAudio && vilm.audioFilename) {
         try {
-          debugLogger.info('Share', 'Preparing audio for sharing');
-          
           // Ensure temp_share directory exists
           try {
             await Filesystem.mkdir({
@@ -62,12 +59,9 @@ class SharingService {
               directory: Directory.Cache,
               recursive: true
             });
-            debugLogger.info('Share', 'Temp directory created');
           } catch (mkdirError) {
-            debugLogger.info('Share', 'Temp directory already exists');
+            // Directory already exists
           }
-
-          debugLogger.info('Share', `Getting audio data: ${vilm.audioFilename}`);
           const { data: base64Data, mimeType } = await nativeAudioService.getAudioFileData(vilm.audioFilename);
           
           let extension = 'webm';
@@ -78,7 +72,6 @@ class SharingService {
           }
           
           const tempFileName = `vilm_${vilm.id}_${Date.now()}.${extension}`;
-          debugLogger.info('Share', `Creating temp share file: ${tempFileName}`);
           
           await Filesystem.writeFile({
             path: `temp_share/${tempFileName}`,
@@ -86,42 +79,29 @@ class SharingService {
             directory: Directory.Cache
           });
 
-          debugLogger.info('Share', 'Getting file URI for sharing');
           const fileUri = await Filesystem.getUri({
             directory: Directory.Cache,
             path: `temp_share/${tempFileName}`
           });
 
-          debugLogger.success('Share', `File ready: ${fileUri.uri}`);
-
           shareData.files = [fileUri.uri];
           shareData.url = fileUri.uri;
           
         } catch (audioError) {
-          debugLogger.error('Share', `Audio prep failed: ${audioError.message}`);
-          debugLogger.error('Share', `Vilm: ${vilm.id}, File: ${vilm.audioFilename}`);
+          console.error('Audio prep failed:', audioError);
         }
       }
 
-      debugLogger.info('Share', `Calling native share - Has Files: ${!!shareData.files}`);
-
       const shareResult = await Share.share(shareData);
-      
-      debugLogger.success('Share', 'Share completed successfully');
 
       if (shareData.files) {
         setTimeout(() => this.cleanupTempShareFiles(), 5000);
       }
 
     } catch (error) {
-      debugLogger.error('Share', `Share failed: ${error.message}`);
-      
       if (error.message?.includes('NotAllowedError')) {
-        const msg = 'Sharing not allowed. Check app permissions.';
-        debugLogger.error('Share', msg);
-        throw new Error(msg);
+        throw new Error('Sharing not allowed. Check app permissions.');
       } else if (error.message?.includes('AbortError')) {
-        debugLogger.warning('Share', 'User cancelled share');
         throw new Error('Sharing was cancelled.');
       } else {
         throw new Error(`Failed to share Vilm: ${error.message || 'Unknown error'}`);

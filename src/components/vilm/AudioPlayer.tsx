@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Play, Pause, AlertCircle } from 'lucide-react';
 import { useHaptics } from '@/hooks/useHaptics';
 import { nativeAudioService } from '@/services/nativeAudioService';
-import { debugLogger } from '@/components/debug/DebugOverlay';
 
 interface AudioPlayerProps {
   audioFilename?: string;
@@ -49,18 +48,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         setIsLoading(true);
         setError(null);
         
-        debugLogger.info('Player', `Loading: ${audioFilename}`);
-        
         const url = await nativeAudioService.getAudioFile(audioFilename);
-        
-        debugLogger.success('Player', 'Audio loaded, creating player');
         setAudioUrl(url);
         
         const audio = new Audio(url);
         audioRef.current = audio;
         
         audio.addEventListener('loadedmetadata', () => {
-          debugLogger.success('Player', 'Audio ready to play');
           setIsLoading(false);
         });
         
@@ -71,20 +65,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         });
         
         audio.addEventListener('ended', () => {
-          debugLogger.info('Player', 'Playback ended');
           setIsPlaying(false);
           setCurrentTime(0);
         });
         
         audio.addEventListener('error', (e) => {
-          debugLogger.error('Player', `Audio error: ${audio.error?.message || 'Unknown'}`);
           setError('Failed to load audio');
           setIsLoading(false);
         });
         
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        debugLogger.error('Player', `Load failed: ${errorMsg}`);
         setError(`Failed to load audio: ${errorMsg}`);
         setIsLoading(false);
       }

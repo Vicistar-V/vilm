@@ -4,7 +4,6 @@ import { dexieVilmStorage } from '@/services/dexieStorage';
 import { nativeAudioService, AudioRecording } from '@/services/nativeAudioService';
 import { browserTranscriptionService } from '@/services/browserTranscriptionService';
 import { permissionsService } from '@/services/permissionsService';
-import { debugLogger } from '@/components/debug/DebugOverlay';
 import { v4 as uuidv4 } from 'uuid';
 
 export const useVilmStorage = () => {
@@ -29,13 +28,9 @@ export const useVilmStorage = () => {
     try {
       setError(null);
       
-      debugLogger.info('Vilm', `Creating new Vilm: ${title}`);
-      
       const id = uuidv4();
       
-      debugLogger.info('Vilm', 'Saving recording permanently...');
       const audioFilename = await nativeAudioService.saveRecordingPermanently(tempRecording);
-      debugLogger.success('Vilm', `Recording saved: ${audioFilename}`);
       
       const vilm = {
         id,
@@ -48,16 +43,13 @@ export const useVilmStorage = () => {
         transcriptionRetryCount: 0
       };
       
-      debugLogger.info('Vilm', 'Saving to database...');
       await dexieVilmStorage.saveVilm(vilm);
       
       await loadVilms();
       
-      debugLogger.info('Vilm', 'Starting transcription...');
       startTranscriptionProcess(id, audioFilename);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to create vilm';
-      debugLogger.error('Vilm', `Create failed: ${errorMsg}`);
       setError(errorMsg);
       throw err;
     }
@@ -132,9 +124,7 @@ export const useVilmStorage = () => {
 
   const startTranscriptionProcess = async (vilmId: string, audioFilename: string) => {
     try {
-      debugLogger.info('Transcription', `Starting for: ${audioFilename}`);
-      
-      await dexieVilmStorage.updateVilm(vilmId, { 
+      await dexieVilmStorage.updateVilm(vilmId, {
         transcriptionStatus: 'processing',
         transcriptionError: undefined 
       });
@@ -145,14 +135,10 @@ export const useVilmStorage = () => {
           : v
       ));
 
-      debugLogger.info('Transcription', 'Loading audio file...');
       const audioDataUrl = await nativeAudioService.getAudioFile(audioFilename);
-      
-      debugLogger.info('Transcription', 'Running Whisper model...');
       const result = await browserTranscriptionService.transcribeAudio(audioDataUrl);
       
       if (result.isSuccess && result.transcript) {
-        debugLogger.success('Transcription', 'Transcription completed!');
         
         await dexieVilmStorage.updateVilm(vilmId, {
           transcript: result.transcript,
@@ -166,7 +152,6 @@ export const useVilmStorage = () => {
         ));
       } else {
         const errorMsg = result.error || 'Transcription failed';
-        debugLogger.error('Transcription', `Failed: ${errorMsg}`);
         
         await dexieVilmStorage.updateVilm(vilmId, {
           transcriptionStatus: 'failed',
@@ -181,7 +166,6 @@ export const useVilmStorage = () => {
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      debugLogger.error('Transcription', `Error: ${errorMsg}`);
       
       await dexieVilmStorage.updateVilm(vilmId, {
         transcriptionStatus: 'failed',
