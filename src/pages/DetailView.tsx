@@ -201,28 +201,16 @@ export const DetailView: React.FC<DetailViewProps> = ({ vilm, onBack, onShare, o
                   />
                 </div>
                 {currentVilm.transcript && currentVilm.transcript.trim() !== '' && currentVilm.transcriptionStatus !== 'processing' && (
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleCopyTranscript}
-                      className="h-9 px-3 gap-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105 active:scale-95"
-                      title="Copy transcript to clipboard"
-                    >
-                      <Copy className="w-4 h-4" />
-                      <span className="text-xs font-medium">Copy</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={handleShareTranscript}
-                      className="h-9 px-3 gap-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105 active:scale-95"
-                      title="Share transcript"
-                    >
-                      <Share className="w-4 h-4" />
-                      <span className="text-xs font-medium">Share</span>
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleCopyTranscript}
+                    className="h-9 px-3 gap-2 hover:bg-muted/50 transition-all duration-200 hover:scale-105 active:scale-95"
+                    title="Copy transcript to clipboard"
+                  >
+                    <Copy className="w-4 h-4" />
+                    <span className="text-xs font-medium">Copy</span>
+                  </Button>
                 )}
               </div>
               
