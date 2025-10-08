@@ -15,6 +15,7 @@ type ProgressListener = (progress: number) => void;
 class BrowserTranscriptionService {
   private transcriber: any = null;
   private isInitializing = false;
+  private initializePromise: Promise<void> | null = null;
   private phase: TranscriptionPhase = 'idle';
   private listeners = new Set<PhaseListener>();
   private progressListeners = new Set<ProgressListener>();
@@ -104,8 +105,25 @@ class BrowserTranscriptionService {
   }
 
   async initialize(): Promise<void> {
-    if (this.transcriber || this.isInitializing) return;
+    // If already initialized, return immediately
+    if (this.transcriber) return;
+    
+    // If currently initializing, wait for it to complete
+    if (this.initializePromise) {
+      return this.initializePromise;
+    }
 
+    // Create new initialization promise
+    this.initializePromise = this._doInitialize();
+    
+    try {
+      await this.initializePromise;
+    } finally {
+      this.initializePromise = null;
+    }
+  }
+
+  private async _doInitialize(): Promise<void> {
     this.isInitializing = true;
     
     // Check if model is already cached
@@ -184,7 +202,27 @@ class BrowserTranscriptionService {
     this.currentTaskId = taskId;
 
     try {
+      // Check if model is still downloading
+      if (this.phase === 'downloading') {
+        return {
+          transcript: '',
+          confidence: 0,
+          isSuccess: false,
+          error: 'Transcription system is still setting up. Please wait for setup to complete.'
+        };
+      }
+
       await this.initialize();
+
+      // Verify transcriber is ready
+      if (!this.transcriber) {
+        return {
+          transcript: '',
+          confidence: 0,
+          isSuccess: false,
+          error: 'Transcription system not ready. Please initialize from Settings.'
+        };
+      }
 
       // Check if cancelled during initialization
       if (this.cancelledTaskIds.has(taskId)) {

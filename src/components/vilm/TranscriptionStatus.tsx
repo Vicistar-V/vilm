@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loader2, FileText, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranscriptionEngine } from '@/hooks/useTranscriptionEngine';
 
 interface TranscriptionStatusProps {
   transcript?: string;
@@ -15,11 +16,28 @@ export const TranscriptionStatus: React.FC<TranscriptionStatusProps> = ({
   transcriptionError,
   className
 }) => {
+  const { isDownloading } = useTranscriptionEngine();
+
+  // Show setup status if model is downloading
+  if (isDownloading && transcriptionError?.includes('setting up')) {
+    return (
+      <div className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
+        <Loader2 className="w-3 h-3 animate-spin" />
+        <span>System setting up...</span>
+      </div>
+    );
+  }
+
   if (transcriptionStatus === 'failed' || transcriptionError) {
+    // Better error message if system not ready
+    const errorText = transcriptionError?.includes('not ready') 
+      ? 'Initialize in Settings'
+      : 'Transcription failed';
+      
     return (
       <div className={cn("flex items-center gap-2 text-xs", className)} style={{ color: 'hsl(var(--warning))' }}>
         <AlertCircle className="w-3 h-3" />
-        <span>Transcription failed</span>
+        <span>{errorText}</span>
       </div>
     );
   }
