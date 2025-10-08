@@ -17,7 +17,7 @@ export interface TranscriptionService {
   cancelTranscription(): void;
 }
 
-// Global transcription state manager
+// Global transcription state manager for handling transcription lifecycle
 class TranscriptionManager {
   private activeTranscription: AbortController | null = null;
   private currentService: TranscriptionService | null = null;
@@ -75,4 +75,6 @@ class TranscriptionManager {
   }
 }
 
+// Export singleton instance
 export const transcriptionManager = new TranscriptionManager();
+
