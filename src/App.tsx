@@ -18,44 +18,28 @@ const queryClient = new QueryClient();
 
 const AppContent = () => {
   const [currentView, setCurrentView] = useState<AppView>('feed');
-  const [selectedVilmId, setSelectedVilmId] = useState<string | null>(null);
   const [selectedVilm, setSelectedVilm] = useState<Vilm | null>(null);
   
   useStatusBar();
   const { notification } = useHaptics();
-  const { vilms, deleteVilm, retryTranscription, getVilmById } = useVilmStorage();
-
-  // Fetch the full vilm from database when selectedVilmId changes
-  useEffect(() => {
-    const fetchVilm = async () => {
-      if (selectedVilmId) {
-        console.log('Fetching vilm from database:', selectedVilmId);
-        const vilm = await getVilmById(selectedVilmId);
-        console.log('Fetched vilm:', vilm ? { id: vilm.id, audioFilename: vilm.audioFilename, isAudioReady: vilm.isAudioReady } : 'null');
-        setSelectedVilm(vilm);
-      } else {
-        setSelectedVilm(null);
-      }
-    };
-    fetchVilm();
-  }, [selectedVilmId, getVilmById]);
+  const { vilms, deleteVilm, retryTranscription } = useVilmStorage();
 
   const handleBack = () => {
     setCurrentView('feed');
-    setSelectedVilmId(null);
+    setSelectedVilm(null);
   };
 
   const handleVilmClick = (vilm: Vilm) => {
     console.log('Vilm clicked:', vilm.id, 'Audio file:', vilm.audioFilename);
     
     // Safety check: ensure vilm has required data before navigating
-    if (!vilm.audioFilename) {
-      console.warn('Vilm missing audio file - preventing navigation');
+    if (!vilm.audioFilename || !vilm.isAudioReady) {
+      console.warn('Vilm not ready - preventing navigation');
       notification('error');
       return;
     }
     
-    setSelectedVilmId(vilm.id);
+    setSelectedVilm(vilm);
     setCurrentView('detail');
   };
 
@@ -67,7 +51,7 @@ const AppContent = () => {
       if (currentView === 'detail' || currentView === 'settings') {
         // Navigate back to feed
         setCurrentView('feed');
-        setSelectedVilmId(null);
+        setSelectedVilm(null);
       } else {
         // On feed view, exit the app
         CapacitorApp.exitApp();
