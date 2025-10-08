@@ -212,11 +212,23 @@ class BrowserTranscriptionService {
     try {
       // Check if model is cached in IndexedDB (transformers.js uses IndexedDB for model storage)
       const databases = await indexedDB.databases();
+      console.log('[ModelCache] Available databases:', databases.map(db => db.name));
+      
       const hasCache = databases.some(db => 
         db.name?.includes('transformers') || 
         db.name?.includes('whisper') ||
-        db.name?.includes('onnx')
+        db.name?.includes('onnx') ||
+        db.name?.includes('huggingface')
       );
+      
+      console.log('[ModelCache] Cache detected:', hasCache);
+      
+      // Also check if transcriber is already initialized
+      if (this.transcriber) {
+        console.log('[ModelCache] Transcriber already initialized');
+        return true;
+      }
+      
       return hasCache;
     } catch {
       return false;
