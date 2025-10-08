@@ -28,7 +28,9 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
 
   // Load audio
   useEffect(() => {
@@ -43,7 +45,9 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
         audioRef.current = audio;
         
         audio.addEventListener('timeupdate', () => {
-          setCurrentTime(audio.currentTime);
+          if (!isDragging) {
+            setCurrentTime(audio.currentTime);
+          }
         });
         
         audio.addEventListener('ended', () => {
@@ -63,10 +67,10 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
         audioRef.current = null;
       }
     };
-  }, [vilm.audioFilename]);
+  }, [vilm.audioFilename, isDragging]);
 
   const handlePlayPause = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click
+    e.stopPropagation();
     if (!audioRef.current) return;
     
     await impact();
@@ -84,13 +88,40 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
     }
   };
 
-  const progress = vilm.duration > 0 ? (currentTime / vilm.duration) * 100 : 0;
+  const seekToPosition = (clientX: number) => {
+    if (!progressRef.current || !audioRef.current) return;
+    
+    const rect = progressRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, x / rect.width));
+    const newTime = percentage * vilm.duration;
+    
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
 
-  // Generate waveform bars (simplified visualization)
-  const waveformBars = Array.from({ length: 40 }, (_, i) => {
-    const height = Math.sin(i * 0.5) * 0.5 + 0.5; // Sinusoidal pattern
-    return height * 0.8 + 0.2; // Scale between 0.2 and 1
-  });
+  const handleProgressClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    seekToPosition(e.clientX);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsDragging(true);
+    seekToPosition(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    seekToPosition(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const progress = vilm.duration > 0 ? (currentTime / vilm.duration) * 100 : 0;
   
   return (
     <Card 
@@ -149,7 +180,7 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
         {vilm.audioFilename && (
           <div 
             className="flex items-center gap-3 pt-2 border-t border-border"
-            onClick={(e) => e.stopPropagation()} // Prevent card click on player area
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Play/Pause Button */}
             <button
@@ -167,24 +198,34 @@ export const VilmCard: React.FC<VilmCardProps> = ({ vilm, onClick }) => {
               )}
             </button>
 
-            {/* Waveform Visualization */}
-            <div className="flex-1 flex items-center gap-0.5 h-8 relative">
-              {waveformBars.map((height, i) => {
-                const isPassed = (i / waveformBars.length) * 100 <= progress;
-                return (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex-1 rounded-full transition-colors duration-150",
-                      isPassed ? "bg-primary" : "bg-muted"
-                    )}
-                    style={{ 
-                      height: `${height * 100}%`,
-                      minHeight: '20%'
-                    }}
-                  />
-                );
-              })}
+            {/* Simple Progress Line */}
+            <div 
+              ref={progressRef}
+              className="flex-1 relative h-8 flex items-center cursor-pointer"
+              onClick={handleProgressClick}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              {/* Background line */}
+              <div className="w-full h-1 bg-muted rounded-full">
+                {/* Progress fill */}
+                <div 
+                  className="h-full bg-primary rounded-full transition-all duration-100"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              
+              {/* Draggable thumb */}
+              <div 
+                className={cn(
+                  "absolute w-3 h-3 bg-primary rounded-full",
+                  "border-2 border-background shadow-sm",
+                  "transition-transform duration-100",
+                  isDragging && "scale-125"
+                )}
+                style={{ left: `calc(${progress}% - 6px)` }}
+              />
             </div>
 
             {/* Time Display */}
